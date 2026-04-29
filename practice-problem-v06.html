@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Arrow — Practice Problem</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper:#f5f1e8; --sheet:#faf8f2; --vellum:#ede9de;
+  --ink:#1c1810; --ink-mid:#4a4438; --ink-faint:#9a9080;
+  --rule:#ddd8cc; --rule-lt:#eae6da;
+  --d:#1a4a82; --d-light:rgba(26,74,130,0.13);
+  --s:#9e3015; --s-light:rgba(158,48,21,0.13);
+  --tax-c:#1a6e38; --tax-fill:rgba(26,110,56,0.15);
+  --dwl-c:#5e1a8a; --dwl-fill:rgba(94,26,138,0.14);
+  --green:#1a6e38; --red:#9e3015; --amber:#8a6000;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--paper);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* Header */
+.hdr{padding:14px 32px;background:var(--ink);display:flex;align-items:baseline;gap:14px;}
+.hdr-mark{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--sheet);}
+.hdr-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.08em;text-transform:uppercase;}
+
+/* Progress */
+.progress{height:3px;background:var(--vellum);}
+.progress-fill{height:100%;background:var(--d);transition:width 0.5s ease;width:0%;}
+
+/* Scenario */
+.scenario{max-width:900px;margin:32px auto 0;padding:0 24px;}
+.scenario-inner{background:var(--sheet);border:0.5px solid var(--rule);border-top:3px solid var(--d);padding:24px 28px;}
+.sc-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--d);margin-bottom:8px;}
+.sc-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;line-height:1.2;margin-bottom:10px;}
+.sc-body{font-size:14px;line-height:1.75;color:var(--ink-mid);max-width:580px;}
+.given{margin-top:16px;padding:12px 16px;background:var(--paper);border-left:2px solid var(--rule);}
+.given-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px;}
+.given-eq{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2.2;}
+.eq-d{color:var(--d);font-weight:500;} .eq-s{color:var(--s);font-weight:500;} .eq-t{color:var(--tax-c);font-weight:500;}
+
+/* Steps */
+.steps{max-width:900px;margin:20px auto 60px;padding:0 24px;display:flex;flex-direction:column;gap:2px;}
+.step{background:var(--sheet);border:0.5px solid var(--rule);overflow:hidden;}
+.step+.step{border-top:none;}
+.step:first-child{border-radius:3px 3px 0 0;}
+.step:last-child{border-radius:0 0 3px 3px;}
+.step.locked{background:var(--paper);opacity:0.5;pointer-events:none;}
+.step.done{background:#f8fdf9;border-color:#c0e4cc;}
+
+.step-hdr{padding:16px 22px;cursor:pointer;display:flex;align-items:center;gap:12px;user-select:none;}
+.step-hdr:hover{background:var(--paper);}
+.step-dot{width:24px;height:24px;border-radius:50%;border:1px solid var(--rule);background:var(--paper);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-faint);flex-shrink:0;transition:all 0.3s;}
+.step.done .step-dot{background:#c8ecd4;border-color:var(--green);color:var(--green);}
+.step-title{font-family:'Playfair Display',serif;font-size:16px;font-style:italic;flex:1;}
+.step.done .step-title{color:var(--ink-mid);}
+.step-chev{color:var(--ink-faint);font-size:10px;transition:transform 0.2s;}
+.step.open .step-chev{transform:rotate(180deg);}
+
+.step-body{display:none;border-top:0.5px solid var(--rule-lt);}
+.step.open .step-body{display:block;}
+
+/* Split layout */
+.split{display:grid;grid-template-columns:1fr 340px;min-height:420px;}
+.split-graph{padding:22px 20px 18px 22px;display:flex;flex-direction:column;gap:10px;border-right:0.5px solid var(--rule-lt);}
+.split-panel{padding:22px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+
+/* Solo layout (algebra only) */
+.solo{padding:22px 24px 24px;}
+
+/* Canvas */
+canvas{display:block;border:0.5px solid var(--rule);background:var(--sheet);border-radius:2px;touch-action:none;width:100%;}
+.fig-cap{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);margin-top:6px;}
+
+/* Palette */
+.palette-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px;}
+.palette{display:flex;flex-direction:column;gap:7px;}
+.pal-btn{padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:13px;border:0.5px solid;border-radius:2px;cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--paper);}
+.pal-btn:hover{filter:brightness(0.97);}
+.pal-btn.sel{box-shadow:inset 0 0 0 1.5px currentColor;}
+.pal-btn.placed{opacity:0.4;pointer-events:none;}
+.pal-btn.placed.ok{opacity:1;}
+.pal-swatch{width:4px;height:24px;border-radius:1px;flex-shrink:0;}
+.pb-cs{color:var(--d);border-color:rgba(26,74,130,0.3);background:#f2f5fb;}
+.pb-cs .pal-swatch{background:var(--d);}
+.pb-ps{color:var(--s);border-color:rgba(158,48,21,0.3);background:#fbf4f1;}
+.pb-ps .pal-swatch{background:var(--s);}
+.pb-tax{color:var(--tax-c);border-color:rgba(26,110,56,0.3);background:#f2f8f4;}
+.pb-tax .pal-swatch{background:var(--tax-c);}
+.pb-dwl{color:var(--dwl-c);border-color:rgba(94,26,138,0.3);background:#f7f2fb;}
+.pb-dwl .pal-swatch{background:var(--dwl-c);}
+
+/* Step intro */
+.step-intro{font-size:13px;line-height:1.75;color:var(--ink-mid);margin-bottom:14px;}
+
+/* Algebra inputs */
+.alg-inputs{display:flex;flex-direction:column;gap:9px;}
+.alg-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.alg-lbl{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-mid);min-width:180px;}
+.alg-in{width:110px;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:15px;border:0.5px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:2px;transition:border-color 0.15s,background 0.15s;}
+.alg-in:focus{outline:none;border-color:var(--ink-mid);}
+.alg-in.ok{border-color:var(--green);background:#f0f8f3;}
+.alg-in.err{border-color:var(--s);background:#fdf4f1;}
+.alg-unit{font-size:13px;color:var(--ink-faint);font-style:italic;}
+
+/* Welfare grid */
+.w-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
+.w-item label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px;}
+.w-item input{width:100%;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:15px;border:0.5px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:2px;}
+.w-item input.ok{border-color:var(--green);background:#f0f8f3;}
+.w-item input.err{border-color:var(--s);background:#fdf4f1;}
+
+/* Buttons */
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px;}
+.btn-check{padding:8px 20px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--ink);color:var(--sheet);border:none;border-radius:2px;cursor:pointer;transition:background 0.15s;}
+.btn-check:hover{background:var(--ink-mid);}
+.btn-soft{padding:7px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.04em;background:none;color:var(--ink-faint);border:0.5px solid var(--rule);border-radius:2px;cursor:pointer;transition:all 0.12s;}
+.btn-soft:hover{color:var(--ink-mid);border-color:var(--ink-mid);}
+.btn-soft.active{color:var(--ink-mid);border-color:var(--ink-mid);background:var(--vellum);}
+.btn-next{padding:9px 22px;font-family:'DM Sans',sans-serif;font-size:13px;background:#eef8f2;color:var(--green);border:0.5px solid var(--green);border-radius:2px;cursor:pointer;display:none;margin-top:18px;transition:all 0.15s;}
+.btn-next:hover{background:var(--green);color:#fff;}
+.btn-shade{padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.04em;background:var(--ink);color:var(--sheet);border:none;border-radius:2px;cursor:pointer;margin-top:10px;}
+.btn-shade:hover{background:var(--ink-mid);}
+
+/* Feedback */
+.fb{margin-top:12px;padding:10px 14px;border-radius:2px;font-size:13px;line-height:1.65;display:none;border-left:2px solid;}
+.fb.show{display:block;}
+.fb.ok{background:#f2faf5;border-color:var(--green);color:#1a4a28;}
+.fb.err{background:#fdf2ef;border-color:var(--s);color:#5a1a0a;}
+.fb.hint{background:#fdf8ee;border-color:#c8960a;color:#5a4000;}
+.fb .line{display:block;margin:2px 0;}
+.fb .line.ok{color:var(--green);}
+.fb .line.err{color:var(--s);}
+
+/* Working panel */
+.working{margin-top:10px;padding:14px 16px;background:var(--paper);border:0.5px solid var(--rule-lt);border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2;display:none;}
+.working.show{display:block;}
+.working .cm{color:var(--ink-faint);font-style:italic;}
+.working .hi{font-weight:500;}
+.working .sep{display:block;border:none;border-top:0.5px solid var(--rule);margin:6px 0;}
+
+/* Shade note */
+.shade-note{font-size:12px;font-style:italic;color:var(--ink-faint);margin-top:10px;line-height:1.6;}
+.cov-bar{height:4px;background:var(--rule);border-radius:2px;margin-top:8px;overflow:hidden;}
+.cov-fill{height:100%;background:var(--green);border-radius:2px;transition:width 0.15s;width:0%;}
+
+/* Complete card */
+.complete-body{padding:24px 28px;}
+.complete-body h3{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--green);margin-bottom:10px;}
+.complete-body p{font-size:14px;line-height:1.75;color:var(--ink-mid);margin-bottom:6px;}
+
+/* Wedge drag hint */
+.wedge-hint{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:0.06em;margin-top:6px;font-style:italic;}
+
+@media(max-width:660px){
+  .split{grid-template-columns:1fr;}
+  .split-graph{border-right:none;border-bottom:0.5px solid var(--rule-lt);}
+  .w-grid{grid-template-columns:1fr;}
+  .scenario,.steps{padding:0 14px;}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <span class="hdr-mark">Project Arrow</span>
+  <span class="hdr-tag">guided practice · excise tax</span>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <button onclick="toggleDev()" id="dev-btn" style="padding:4px 10px;border-radius:2px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.45);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.06em;cursor:pointer;">dev</button>
+    <button onclick="toggleHelp()" style="width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);font-size:13px;cursor:pointer;">?</button>
+  </div>
+</header>
+
+<div id="help-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--sheet);border:0.5px solid var(--rule);border-radius:4px;padding:26px 30px;max-width:500px;width:100%;position:relative;font-size:13px;line-height:1.7;">
+    <button onclick="toggleHelp()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink-faint);">✕</button>
+    <h3 style="font-family:'Playfair Display',serif;font-size:17px;margin-bottom:14px;">How this works</h3>
+    <p style="color:var(--ink-mid);margin-bottom:10px;"><strong style="color:var(--ink)">Step 1 — Placing curves</strong><br>
+    Drag the ● filled circle to shift the curve up or down (changes the intercept). Drag the ○ dashed circle at the curve's end to rotate it (changes the slope). Drag the curve body to shift it.</p>
+    <p style="color:var(--ink-mid);margin-bottom:10px;"><strong style="color:var(--ink)">Step 3 — Tax wedge</strong><br>
+    Drag the blue <em>Pc</em> bar and red <em>Pp</em> bar on the left axis to the correct price levels. The green rectangle shows the gap between them — it should equal the tax of $40.</p>
+    <p style="color:var(--ink-mid);margin-bottom:0;"><strong style="color:var(--ink)">Steps 4 &amp; 5 — Shading and calculations</strong><br>
+    Select a region from the palette and paint over it on the diagram. Enter welfare values using the triangle and rectangle formulas.</p>
+  </div>
+</div>
+<div class="progress"><div class="progress-fill" id="prog"></div></div>
+
+<div class="scenario">
+  <div class="scenario-inner">
+    <div class="sc-eyebrow">Practice problem · Supply &amp; demand · Tax incidence</div>
+    <h1 class="sc-title">Iran's Transit Tax on Oil Through the Strait of Hormuz</h1>
+    <p class="sc-body">Iran controls the Strait of Hormuz, through which roughly 20% of global oil passes. Facing fiscal pressure, Iran imposes a transit fee of $40 per unit on all oil shipped through the strait — effectively an excise tax falling on suppliers.</p>
+    <div class="given">
+      <div class="given-lbl">Given</div>
+      <div class="given-eq">
+        <span class="eq-d">Demand:</span>  P = 200 − 2Q<br>
+        <span class="eq-s">Supply:</span>  P = 20 + 2Q<br>
+        <span class="eq-t">Transit fee:</span>  t = $40 per unit
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="steps">
+
+  <!-- ══ STEP 1: Place the curves ══ -->
+  <div class="step open" id="s1">
+    <div class="step-hdr" onclick="tog('s1')">
+      <div class="step-dot" id="dot1">1</div>
+      <div class="step-title">Place the supply and demand curves</div>
+      <div class="step-chev">▾</div>
+    </div>
+    <div class="step-body">
+      <div class="split">
+        <div class="split-graph">
+          <canvas id="cv1" height="340"></canvas>
+          <div class="fig-cap">Drag curves into position using the equations above</div>
+        </div>
+        <div class="split-panel">
+          <p class="step-intro">The curves are shown in default positions. Using the equations given, drag each curve to its correct position. You can drag the curve body to shift it, or drag the end handles to change the slope.</p>
+
+          <div style="background:var(--paper);border:0.5px solid var(--rule);border-radius:2px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.9;">
+            <span style="color:var(--d);font-weight:500">D:</span> intercept a = <strong>200</strong>, slope b = <strong>2</strong><br>
+            <span style="color:var(--s);font-weight:500">S:</span> intercept c = <strong>20</strong>, slope d = <strong>2</strong>
+          </div>
+
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn-check" onclick="chk1()">Check curves</button>
+            <button class="btn-soft" id="hbtn-h1" onclick="togEl('h1','hbtn-h1')">Hint</button>
+          </div>
+          <div class="fb hint" id="h1">Demand has a negative slope — it falls from top-left to bottom-right. Supply has a positive slope — it rises from bottom-left to top-right. The intercept is where the curve crosses the price axis (Q = 0).</div>
+          <div class="fb" id="fb1"></div>
+          <button class="btn-next" id="nb1" onclick="nxt(1)">Continue to step 2 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2: Find equilibrium ══ -->
+  <div class="step locked" id="s2">
+    <div class="step-hdr" onclick="tog('s2')">
+      <div class="step-dot" id="dot2">2</div>
+      <div class="step-title">Find the pre-tax equilibrium</div>
+      <div class="step-chev">▾</div>
+    </div>
+    <div class="step-body">
+      <div class="split">
+        <div class="split-graph">
+          <canvas id="cv2" height="340"></canvas>
+          <div class="fig-cap">Fig. 1 — pre-tax equilibrium</div>
+        </div>
+        <div class="split-panel">
+          <p class="step-intro">Set demand equal to supply and solve for the equilibrium price and quantity. As you type, watch your answers appear on the diagram.</p>
+          <div class="alg-inputs">
+            <div class="alg-row">
+              <span class="alg-lbl">Q* =</span>
+              <input class="alg-in" id="s2q" type="number" placeholder="?" oninput="live2()">
+              <span class="alg-unit">units</span>
+            </div>
+            <div class="alg-row">
+              <span class="alg-lbl">P* =</span>
+              <input class="alg-in" id="s2p" type="number" placeholder="$?" oninput="live2()">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-check" onclick="chk2()">Check</button>
+            <button class="btn-soft" id="hbtn-h2" onclick="togEl('h2','hbtn-h2')">Hint</button>
+            <button class="btn-soft" id="hbtn-sol2" onclick="togEl('sol2','hbtn-sol2')">Solution</button>
+          </div>
+          <div class="fb hint" id="h2">Set 200 − 2Q = 20 + 2Q. Collect Q terms: 180 = 4Q.</div>
+          <div class="fb" id="fb2"></div>
+          <div class="working" id="sol2">
+            <span class="cm">// Set D = S</span><span class="sep"></span>
+            200 − 2Q  =  20 + 2Q<br>180  =  4Q<br>
+            <span class="hi">Q* = 45</span><span class="sep"></span>
+            <span class="cm">// Substitute back</span><span class="sep"></span>
+            P* = 200 − 2(45) = <span class="hi">110</span>
+          </div>
+          <button class="btn-next" id="nb2" onclick="nxt(2)">Continue to step 3 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 3: Place the tax wedge ══ -->
+  <div class="step locked" id="s3">
+    <div class="step-hdr" onclick="tog('s3')">
+      <div class="step-dot" id="dot3">3</div>
+      <div class="step-title">Place the tax wedge</div>
+      <div class="step-chev">▾</div>
+    </div>
+    <div class="step-body">
+      <div class="split">
+        <div class="split-graph">
+          <canvas id="cv3" height="340"></canvas>
+          <div class="fig-cap">Drag the buyer and seller price dots onto the diagram</div>
+        </div>
+        <div class="split-panel">
+          <p class="step-intro">The transit fee creates a wedge between what buyers pay and what sellers receive. Two dots sit on the price axis — drag the <span style="color:var(--d);font-weight:500">blue dot</span> to the consumer price (Pc) and the <span style="color:var(--s);font-weight:500">red dot</span> to the producer price (Pp). Dashed lines will extend across the diagram as you place them.</p>
+
+          <div style="background:var(--paper);border:0.5px solid var(--rule);border-radius:2px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2;">
+            <span style="color:var(--ink-faint);font-style:italic">Use your step 2 answers and the transit fee to find Pc and Pp.</span>
+          </div>
+
+          <div class="wedge-hint" id="wedge-size-hint" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-faint);"></div>
+
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn-check" onclick="chk3()">Check placement</button>
+            <button class="btn-soft" id="hbtn-h3" onclick="togEl('h3','hbtn-h3')">Hint</button>
+            <button class="btn-soft" id="hbtn-sol3" onclick="togEl('sol3','hbtn-sol3')">Solution</button>
+          </div>
+          <div class="fb hint" id="h3">After the $40 transit fee, the new supply curve is P = 60 + 2Q. Set this equal to demand to find the new quantity. Pc reads from the demand curve at that quantity. Pp = Pc minus the tax.</div>
+          <div class="fb" id="fb3"></div>
+          <div class="working" id="sol3">
+            <span class="cm">// New supply: P = 20 + 40 + 2Q = 60 + 2Q</span><span class="sep"></span>
+            200 − 2Q  =  60 + 2Q<br>140  =  4Q<br>
+            <span class="hi">Q*ₜ = 35</span><span class="sep"></span>
+            <span class="cm">// Consumer price: on demand curve at Q*ₜ</span><span class="sep"></span>
+            Pc = 200 − 2(35) = <span class="hi">130</span><span class="sep"></span>
+            <span class="cm">// Producer price: consumer price minus tax</span><span class="sep"></span>
+            Pp = 130 − 40 = <span class="hi">90</span>
+          </div>
+          <button class="btn-next" id="nb3" onclick="nxt(3)">Continue to step 4 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 4: Shade regions ══ -->
+  <div class="step locked" id="s4">
+    <div class="step-hdr" onclick="tog('s4')">
+      <div class="step-dot" id="dot4">4</div>
+      <div class="step-title">Shade the welfare regions</div>
+      <div class="step-chev">▾</div>
+    </div>
+    <div class="step-body">
+      <div class="split">
+        <div class="split-graph">
+          <canvas id="cv4" height="340"></canvas>
+          <div class="fig-cap">Fig. 3 — tax wedge with welfare regions</div>
+        </div>
+        <div class="split-panel">
+          <p class="step-intro">The diagram shows the original supply and demand curves with the tax wedge you placed in step 3 — Pc=130, Pp=90, Q*ₜ=35. Select each welfare region from the palette and paint it on the diagram.</p>
+          <div class="palette-eyebrow">Select region to shade</div>
+          <div class="palette">
+            <button class="pal-btn pb-cs"  id="pb4-cs"  onclick="psel('cs')"><div class="pal-swatch"></div><span class="pname">Consumer surplus</span></button>
+            <button class="pal-btn pb-ps"  id="pb4-ps"  onclick="psel('ps')"><div class="pal-swatch"></div><span class="pname">Producer surplus</span></button>
+            <button class="pal-btn pb-tax" id="pb4-tax" onclick="psel('tax')"><div class="pal-swatch"></div><span class="pname">Tax revenue</span></button>
+            <button class="pal-btn pb-dwl" id="pb4-dwl" onclick="psel('dwl')"><div class="pal-swatch"></div><span class="pname">Deadweight loss</span></button>
+          </div>
+          <div class="cov-bar"><div class="cov-fill" id="cov-fill"></div></div>
+          <p class="shade-note" id="shade-note">Select a region above, then drag to paint.</p>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn-shade" onclick="chkShade()">Check shading</button>
+            <button class="btn-soft" onclick="togEl('h4','')">Hint</button>
+            <button class="btn-soft" onclick="revealS4()">Show answer</button>
+          </div>
+          <div class="fb hint" id="h4">CS: above Pc=130 below demand. PS: above original supply below Pp=90. Tax revenue: rectangle between Pc and Pp to Q*ₜ=35. DWL: small triangle between Q*ₜ=35 and Q*=45.</div>
+          <div class="fb" id="fb4"></div>
+          <button class="btn-next" id="nb4" onclick="nxt(4)">Continue to step 5 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 5: Welfare calculations ══ -->
+  <div class="step locked" id="s5">
+    <div class="step-hdr" onclick="tog('s5')">
+      <div class="step-dot" id="dot5">5</div>
+      <div class="step-title">Calculate the welfare effects</div>
+      <div class="step-chev">▾</div>
+    </div>
+    <div class="step-body">
+      <div class="solo">
+        <p class="step-intro">Using the equilibrium values from steps 2 and 3, calculate each welfare area.</p>
+        <div class="w-grid">
+          <div class="w-item"><label>Consumer surplus (CS)</label><input id="w-cs" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Producer surplus (PS)</label><input id="w-ps" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Tax revenue (TR)</label><input id="w-tr" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Deadweight loss (DWL)</label><input id="w-dwl" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Post-tax total surplus</label><input id="w-ts" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Pre-tax total surplus</label><input id="w-ts0" type="number" placeholder="?"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-check" onclick="chk5()">Check</button>
+          <button class="btn-soft" id="hbtn-h5" onclick="togEl('h5','hbtn-h5')">Hint</button>
+          <button class="btn-soft" id="hbtn-sol5" onclick="togEl('sol5','hbtn-sol5')">Solution</button>
+        </div>
+        <div class="fb hint" id="h5">CS = ½(200−Pc)×Q*ₜ · PS = ½(Pp−20)×Q*ₜ · TR = 40×Q*ₜ · DWL = ½×40×(Q*−Q*ₜ)</div>
+        <div class="fb" id="fb5"></div>
+        <div class="working" id="sol5">
+          <span class="cm">// CS = ½ × (200−130) × 35</span><span class="sep"></span>
+          CS = ½ × 70 × 35 = <span class="hi">1,225</span><span class="sep"></span>
+          <span class="cm">// PS = ½ × (90−20) × 35</span><span class="sep"></span>
+          PS = ½ × 70 × 35 = <span class="hi">1,225</span><span class="sep"></span>
+          TR = 40 × 35 = <span class="hi">1,400</span><span class="sep"></span>
+          DWL = ½ × 40 × 10 = <span class="hi">200</span><span class="sep"></span>
+          TS = 1,225 + 1,225 + 1,400 = <span class="hi">3,850</span><span class="sep"></span>
+          TS₀ = ½ × 180 × 45 = <span class="hi">4,050</span>
+        </div>
+        <button class="btn-next" id="nb5" onclick="nxt(5)">Problem complete ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complete -->
+  <div class="step locked done" id="s6">
+    <div class="step-hdr">
+      <div class="step-dot" style="background:#c8ecd4;border-color:var(--green);color:var(--green);">✓</div>
+      <div class="step-title" style="color:var(--green);font-style:normal;font-weight:600;">Problem complete</div>
+    </div>
+    <div class="step-body">
+      <div class="complete-body">
+        <h3>Summary</h3>
+        <p>Pre-tax: Q* = 45, P* = 110. Total surplus = 4,050.</p>
+        <p>Post-tax (t = $40): Q*ₜ = 35, Pc = 130, Pp = 90. The burden is shared equally — consumers pay $20 more, producers receive $20 less — because supply and demand slopes are equal.</p>
+        <p>Tax revenue = 1,400. Deadweight loss = 200. Total surplus falls by exactly the DWL.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// PROBLEM CONSTANTS
+// ════════════════════════════════════════════════════
+const DA=200,DB=2,SC=20,SD=2,TAX=40;
+const Qs=(DA-SC)/(DB+SD);   // 45
+const Ps=DA-DB*Qs;           // 110
+const Qt=(DA-(SC+TAX))/(DB+SD); // 35
+const Pc=DA-DB*Qt;           // 130
+const Pp=Pc-TAX;             // 90
+const CS_=0.5*(DA-Pc)*Qt;    // 1225
+const PS_=0.5*(Pp-SC)*Qt;    // 1225
+const TR_=TAX*Qt;            // 1400
+const DWL_=0.5*TAX*(Qs-Qt);  // 200
+const TS_=CS_+PS_+TR_;       // 3850
+const TS0_=0.5*(DA-SC)*Qs;   // 4050
+
+// ════════════════════════════════════════════════════
+// CANVAS ENGINE
+// ════════════════════════════════════════════════════
+const CW=480, CH=340;
+const PAD={l:54,r:18,t:16,b:42};
+const PW=CW-PAD.l-PAD.r, PH=CH-PAD.t-PAD.b;
+
+// Fixed scale — ensures D x-intercept (Q=DA/DB=100) and all key values visible
+const MAXP=DA*1.25;   // 250 — gives room above DA=200
+const MAXQ=(DA/DB)*1.25; // 125 — demand x-intercept at Q=100 visible with margin
+
+function sx(Q){return PAD.l+(Q/MAXQ)*PW;}
+function sy(P){return PAD.t+(1-P/MAXP)*PH;}
+function qdx(x){return((x-PAD.l)/PW)*MAXQ;}
+function qdy(y){return(1-(y-PAD.t)/PH)*MAXP;}
+
+function initCv(id){
+  const cv=E(id);
+  const r=cv.parentElement.getBoundingClientRect();
+  cv.width=Math.floor(r.width)-2;
+  cv.style.width=cv.width+'px';
+  cv.height=CH;
+  return cv.getContext('2d');
+}
+
+function drawFrame(ctx){
+  const W=ctx.canvas.width;
+  // Grid
+  ctx.strokeStyle='rgba(0,0,0,0.04)';ctx.lineWidth=0.5;
+  for(let i=1;i<=5;i++){
+    const gx=sx(i/5*MAXQ),gy=sy(i/5*MAXP);
+    ctx.beginPath();ctx.moveTo(gx,PAD.t);ctx.lineTo(gx,CH-PAD.b);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD.l,gy);ctx.lineTo(W-PAD.r,gy);ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle='rgba(0,0,0,0.22)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,CH-PAD.b);ctx.lineTo(W-PAD.r,CH-PAD.b);ctx.stroke();
+  // Ticks + labels
+  ctx.fillStyle='rgba(0,0,0,0.32)';ctx.font='10px JetBrains Mono,monospace';
+  for(let i=1;i<=5;i++){
+    const Q=Math.round(i/5*MAXQ),P=Math.round(i/5*MAXP);
+    const gx=sx(i/5*MAXQ),gy=sy(i/5*MAXP);
+    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(gx,CH-PAD.b);ctx.lineTo(gx,CH-PAD.b+4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD.l,gy);ctx.lineTo(PAD.l-4,gy);ctx.stroke();
+    ctx.textAlign='center';ctx.fillText(Q,gx,CH-PAD.b+13);
+    ctx.textAlign='right';ctx.fillText(P,PAD.l-7,gy+3.5);
+  }
+  ctx.fillStyle='rgba(0,0,0,0.38)';ctx.font='italic 12px DM Sans,sans-serif';
+  ctx.textAlign='center';ctx.fillText('Q',PAD.l+PW/2,CH-4);
+  ctx.save();ctx.translate(14,PAD.t+PH/2);ctx.rotate(-Math.PI/2);ctx.fillText('P',0,0);ctx.restore();
+
+  // Answer-value guide ticks — faint markers at key values so students can align
+  const guidePvals=[SC,Pp,Ps,Pc,DA]; // 20,90,110,130,200
+  const guideQvals=[Qt,Qs,DA/DB];    // 35,45,100
+  ctx.save();
+  ctx.strokeStyle='rgba(0,0,0,0.10)';ctx.lineWidth=0.5;ctx.setLineDash([2,3]);
+  guidePvals.forEach(P=>{
+    if(P<=0||P>=MAXP)return;
+    const y=sy(P);
+    ctx.beginPath();ctx.moveTo(PAD.l-8,y);ctx.lineTo(PAD.l,y);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.18)';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
+    ctx.fillText(P,PAD.l-10,y+3);
+  });
+  guideQvals.forEach(Q=>{
+    if(Q<=0||Q>=MAXQ)return;
+    const x=sx(Q);
+    ctx.beginPath();ctx.moveTo(x,CH-PAD.b);ctx.lineTo(x,CH-PAD.b+8);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.18)';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText(Q,x,CH-PAD.b+16);
+  });
+  ctx.restore();
+}
+
+function drawCurve(ctx,intercept,slope,isDemand,color,label,alpha,dashed){
+  ctx.save();ctx.strokeStyle=color;ctx.lineWidth=dashed?1.5:2.6;ctx.lineCap='round';
+  ctx.globalAlpha=alpha??1;
+  if(dashed)ctx.setLineDash([6,5]);
+  ctx.beginPath();let started=false;
+  for(let i=0;i<=120;i++){
+    const Q=i/120*MAXQ*1.04;
+    const P=isDemand?intercept-slope*Q:intercept+slope*Q;
+    if(P<-MAXP*0.02||P>MAXP*1.04||Q<0){started=false;continue;}
+    const x=sx(Q),y=sy(P);
+    if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);
+  }
+  ctx.stroke();ctx.restore();
+  if(label&&!(alpha<0.5)){
+    let lQ,lP;
+    if(isDemand){
+      // D: place at 68% toward x-intercept
+      lQ=(intercept/slope)*0.68;
+      lP=intercept-slope*lQ;
+    }else{
+      // S: place at a fixed Q = 60% of MAXQ, regardless of slope
+      // This keeps the label visible and mid-curve for any slope
+      lQ=MAXQ*0.60;
+      lP=intercept+slope*lQ;
+      // If that's off the top, walk inward until it fits
+      if(lP>MAXP*0.88){
+        lQ=Math.max(MAXQ*0.15,(MAXP*0.82-intercept)/Math.max(slope,0.01));
+        lP=intercept+slope*lQ;
+      }
+    }
+    if(lQ!==null&&lP>8&&lP<MAXP*0.95&&lQ>0&&lQ<MAXQ*0.99){
+      ctx.save();ctx.globalAlpha=alpha??1;
+      ctx.fillStyle=color;ctx.font='italic bold 14px Playfair Display,serif';
+      ctx.textAlign='left';ctx.fillText(label,sx(lQ)+6,sy(lP)-6);ctx.restore();
+    }
+  }
+}
+
+function drawEqDot(ctx,Q,P,qlbl,plbl){
+  const ex=sx(Q),ey=sy(P);
+  ctx.save();ctx.setLineDash([3,5]);ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex,CH-PAD.b);
+  ctx.moveTo(ex,ey);ctx.lineTo(PAD.l,ey);ctx.stroke();ctx.restore();
+  ctx.save();ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
+  ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fillStyle='#1c1810';ctx.fill();ctx.restore();
+  ctx.fillStyle='rgba(0,0,0,0.4)';ctx.font='10px JetBrains Mono,monospace';
+  ctx.textAlign='center';ctx.fillText(qlbl,ex,CH-PAD.b+13);
+  ctx.textAlign='right';ctx.fillText(plbl,PAD.l-6,ey+3.5);
+}
+
+function drawHandle(ctx,x,y,color,dashed){
+  ctx.save();
+  if(dashed){ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.setLineDash([3,2]);}
+  else{ctx.fillStyle=color;ctx.strokeStyle='white';ctx.lineWidth=1.5;}
+  ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);
+  if(dashed)ctx.stroke();else{ctx.fill();ctx.stroke();}
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════════
+// CANVAS 1 — Curve placement
+// ════════════════════════════════════════════════════
+let cv1ctx=null;
+// Student curve state — starts displaced but not frustratingly far
+// D: intercept too high (160 vs 200), slope too steep (3 vs 2)
+// S: intercept too high (50 vs 20), slope too flat (1 vs 2)
+let c1={da:160,db:3,sc:50,sd:1.0};
+let c1drag=null,c1dragRef=null;
+
+function initCv1(){
+  cv1ctx=initCv('cv1');
+  renderCv1();
+  setupCv1Events();
+}
+
+function renderCv1(){
+  if(!cv1ctx)return;
+  const ctx=cv1ctx;
+  ctx.clearRect(0,0,ctx.canvas.width,CH);
+  drawFrame(ctx);
+  drawCurve(ctx,c1.da,c1.db,true,'#1a4a82','D');
+  drawCurve(ctx,c1.sc,c1.sd,false,'#9e3015','S');
+  const dh=cv1Handles();
+  // Intercept handles (filled)
+  drawHandle(ctx,dh.dInt.x,dh.dInt.y,'rgba(26,74,130,0.65)',false);
+  drawHandle(ctx,dh.sInt.x,dh.sInt.y,'rgba(158,48,21,0.65)',false);
+  // Slope handles (dashed) — ONE per curve at far end only
+  drawHandle(ctx,dh.dSlp.x,dh.dSlp.y,'#1a4a82',true);
+  drawHandle(ctx,dh.sSlp.x,dh.sSlp.y,'#9e3015',true);
+  // Handle labels — positioned to avoid overlap with curves
+  ctx.font='9px JetBrains Mono';ctx.fillStyle='rgba(0,0,0,0.32)';
+  // D intercept label: to the right of handle
+  ctx.textAlign='left';ctx.fillText('↕',dh.dInt.x+10,dh.dInt.y+4);
+  // D slope label: above handle
+  ctx.textAlign='center';ctx.fillText('↻',dh.dSlp.x,dh.dSlp.y-10);
+  // S intercept label: to the right
+  ctx.textAlign='left';ctx.fillText('↕',dh.sInt.x+10,dh.sInt.y+4);
+  // S slope label: below handle
+  ctx.textAlign='center';ctx.fillText('↻',dh.sSlp.x,dh.sSlp.y+16);
+}
+
+function cv1Handles(){
+  const W=ctx_w();
+  const chartRight=W-PAD.r-12;
+  const chartTop=PAD.t+12;
+  const chartBot=CH-PAD.b-12;
+
+  // Demand: intercept on P axis, slope handle at 70% of Q range to x-intercept
+  const dQmax=Math.min(MAXQ*0.92,(c1.da-10)/Math.max(c1.db,0.01));
+  const dQ70=dQmax*0.70;
+  const dSlpX=Math.min(chartRight,sx(dQ70));
+  const dSlpY=Math.max(chartTop,Math.min(chartBot,sy(c1.da-c1.db*dQ70)));
+
+  // Supply: intercept on P axis, slope handle at fixed Q = MAXQ*0.55
+  // (stays well inside chart regardless of slope steepness)
+  const sQ=Math.min(MAXQ*0.55, (MAXP*0.90-c1.sc)/Math.max(c1.sd,0.01));
+  const sSlpX=Math.min(chartRight,Math.max(PAD.l+20,sx(sQ)));
+  const sSlpY=Math.max(chartTop,Math.min(chartBot,sy(c1.sc+c1.sd*sQ)));
+
+  return{
+    dInt:{x:sx(0),y:Math.max(chartTop,Math.min(chartBot,sy(Math.min(c1.da,MAXP*0.97))))},
+    dSlp:{x:dSlpX,y:dSlpY},
+    sInt:{x:sx(0),y:Math.max(chartTop,Math.min(chartBot,sy(Math.min(Math.max(c1.sc,-10),MAXP*0.97))))},
+    sSlp:{x:sSlpX,y:sSlpY},
+  };
+}
+
+function ctx_w(){return cv1ctx?cv1ctx.canvas.width:CW;}
+
+function setupCv1Events(){
+  const cv=E('cv1');
+  function getXY(e){
+    const r=cv.getBoundingClientRect();
+    const sc=cv.width/r.width;
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{x:(cx-r.left)*sc,y:(cy-r.top)*sc};
+  }
+  function hit(px,py,hx,hy,thresh){return Math.hypot(px-hx,py-hy)<(thresh||16);}
+  function nearAnyHandle(p,h){
+    return Object.values(h).some(hnd=>Math.hypot(p.x-hnd.x,p.y-hnd.y)<28);
+  }
+  function hitCurve(px,py,intercept,slope,isDemand){
+    const Q=qdx(px),Pexp=isDemand?intercept-slope*Q:intercept+slope*Q;
+    return Math.abs(py-sy(Pexp))<18&&Q>=0;
+  }
+  function start(e){
+    e.preventDefault();
+    const p=getXY(e);
+    const h=cv1Handles();
+    // Handles have higher priority — larger hit zone than body drag
+    if(hit(p.x,p.y,h.dInt.x,h.dInt.y,18)){c1drag='d-int';c1dragRef={p,...c1};}
+    else if(hit(p.x,p.y,h.dSlp.x,h.dSlp.y,18)){c1drag='d-slp';c1dragRef={p,...c1};}
+    else if(hit(p.x,p.y,h.sInt.x,h.sInt.y,18)){c1drag='s-int';c1dragRef={p,...c1};}
+    else if(hit(p.x,p.y,h.sSlp.x,h.sSlp.y,18)){c1drag='s-slp';c1dragRef={p,...c1};}
+    // Body drag only if not near any handle
+    else if(hitCurve(p.x,p.y,c1.da,c1.db,true)&&!nearAnyHandle(p,h)){c1drag='d-body';c1dragRef={p,...c1};}
+    else if(hitCurve(p.x,p.y,c1.sc,c1.sd,false)&&!nearAnyHandle(p,h)){c1drag='s-body';c1dragRef={p,...c1};}
+  }
+  function move(e){
+    e.preventDefault();
+    if(!c1drag)return;
+    const p=getXY(e);
+    const ref=c1dragRef;
+    const dP=qdy(p.y)-qdy(ref.p.y);
+    if(c1drag==='d-body'||c1drag==='d-int'){
+      c1.da=Math.max(c1.sc+5,ref.da+dP);
+    }else if(c1drag==='s-body'||c1drag==='s-int'){
+      c1.sc=Math.max(-MAXP*0.3,Math.min(c1.da-5,ref.sc+dP));
+    }else if(c1drag==='d-slp'){
+      // Rotate demand: slope = (intercept - P_at_drag) / Q_at_drag
+      const Q=Math.max(5,qdx(p.x));
+      const P=qdy(p.y);
+      const ns=(ref.da-P)/Q;
+      if(ns>0.05&&ns<20)c1.db=ns;
+    }else if(c1drag==='s-slp'){
+      // Rotate supply: slope = (P_at_drag - intercept) / Q_at_drag
+      const Q=Math.max(5,qdx(p.x));
+      const P=qdy(p.y);
+      const ns=(P-ref.sc)/Q;
+      if(ns>0.05&&ns<20)c1.sd=ns;
+    }
+    renderCv1();
+  }
+  function end(e){e.preventDefault();c1drag=null;}
+  cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);
+  cv.addEventListener('mouseup',end);cv.addEventListener('mouseleave',end);
+  cv.addEventListener('touchstart',start,{passive:false});
+  cv.addEventListener('touchmove',move,{passive:false});
+  cv.addEventListener('touchend',end,{passive:false});
+}
+
+function chk1(){
+  const TOL_INT=8,TOL_SLP=0.4;
+  const dIntOk=Math.abs(c1.da-DA)<=TOL_INT;
+  const dSlpOk=Math.abs(c1.db-DB)<=TOL_SLP;
+  const sIntOk=Math.abs(c1.sc-SC)<=TOL_INT;
+  const sSlpOk=Math.abs(c1.sd-SD)<=TOL_SLP;
+  const dOk=dIntOk&&dSlpOk;
+  const sOk=sIntOk&&sSlpOk;
+  const fb=E('fb1');
+
+  let lines=[];
+  if(dOk) lines.push('<span class="line ok">✓ Demand curve is correctly placed.</span>');
+  else{
+    let msgs=[];
+    if(!dIntOk)msgs.push('intercept should be '+DA+' (currently ~'+Math.round(c1.da)+')');
+    if(!dSlpOk)msgs.push('slope should be '+DB+' (currently ~'+Math.round(c1.db*10)/10+')');
+    lines.push('<span class="line err">✗ Demand needs adjusting — '+msgs.join('; ')+'.</span>');
+  }
+  if(sOk) lines.push('<span class="line ok">✓ Supply curve is correctly placed.</span>');
+  else{
+    let msgs=[];
+    if(!sIntOk)msgs.push('intercept should be '+SC+' (currently ~'+Math.round(c1.sc)+')');
+    if(!sSlpOk)msgs.push('slope should be '+SD+' (currently ~'+Math.round(c1.sd*10)/10+')');
+    lines.push('<span class="line err">✗ Supply needs adjusting — '+msgs.join('; ')+'.</span>');
+  }
+
+  fb.className='fb '+(dOk&&sOk?'ok':'err')+' show';
+  fb.innerHTML=lines.join('');
+  if(dOk&&sOk){
+    // Snap to exact
+    c1={da:DA,db:DB,sc:SC,sd:SD};
+    renderCv1();
+    E('nb1').style.display='inline-block';
+  }
+}
+
+// ════════════════════════════════════════════════════
+// CANVAS 2 — Pre-tax equilibrium with live algebra
+// ════════════════════════════════════════════════════
+let cv2ctx=null;
+
+function initCv2(){
+  cv2ctx=initCv('cv2');
+  renderCv2(null,null);
+}
+
+function live2(){
+  const q=parseFloat(E('s2q').value),p=parseFloat(E('s2p').value);
+  renderCv2(isNaN(q)?null:q,isNaN(p)?null:p);
+}
+
+function renderCv2(lQ,lP){
+  if(!cv2ctx)return;
+  const ctx=cv2ctx;ctx.clearRect(0,0,ctx.canvas.width,CH);
+  drawFrame(ctx);
+  drawCurve(ctx,DA,DB,true,'#1a4a82','D');
+  drawCurve(ctx,SC,SD,false,'#9e3015','S');
+  if(lQ!==null&&lQ>0&&lQ<MAXQ){
+    const toP=lP!==null&&lP>0?lP:null;
+    // Vertical line from x-axis up to P level
+    const x=sx(lQ);
+    const topY=toP!==null?sy(toP):PAD.t;
+    ctx.save();ctx.strokeStyle='rgba(26,74,130,0.4)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(x,topY);ctx.lineTo(x,CH-PAD.b);ctx.stroke();ctx.restore();
+    ctx.fillStyle='rgba(26,74,130,0.5)';ctx.font='10px JetBrains Mono';
+    ctx.textAlign='center';ctx.fillText('Q='+lQ,x,CH-PAD.b+13);
+  }
+  if(lP!==null&&lP>0&&lP<MAXP){
+    const toQ=lQ!==null&&lQ>0?lQ:null;
+    const y=sy(lP);
+    const rightX=toQ!==null?sx(toQ):ctx.canvas.width-PAD.r;
+    ctx.save();ctx.strokeStyle='rgba(26,74,130,0.4)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(rightX,y);ctx.stroke();ctx.restore();
+    ctx.fillStyle='rgba(26,74,130,0.5)';ctx.font='10px JetBrains Mono';
+    ctx.textAlign='right';ctx.fillText('P='+lP,PAD.l-6,y+3.5);
+  }
+  if(lQ!==null&&lP!==null&&Math.abs(lQ-Qs)<=2&&Math.abs(lP-Ps)<=2){
+    drawEqDot(ctx,Qs,Ps,'Q*=45','P*=110');
+  }else if(lQ!==null&&lP!==null&&lQ>0&&lP>0){
+    const ex=sx(lQ),ey=sy(lP);
+    ctx.save();ctx.globalAlpha=0.4;ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fillStyle='#1a4a82';ctx.fill();ctx.restore();
+  }
+}
+
+function chk2(){
+  const q=+E('s2q').value,p=+E('s2p').value;
+  const qOk=Math.abs(q-Qs)<=1,pOk=Math.abs(p-Ps)<=1;
+  E('s2q').className='alg-in '+(qOk?'ok':'err');
+  E('s2p').className='alg-in '+(pOk?'ok':'err');
+  const fb=E('fb2');
+  if(qOk&&pOk){
+    fb.className='fb ok show';fb.textContent='Correct — Q* = 45, P* = 110.';
+    renderCv2(Qs,Ps);
+    E('nb2').style.display='inline-block';
+  }else{
+    fb.className='fb err show';
+    fb.textContent=(!qOk&&!pOk)?'Both need checking. Set 200−2Q = 20+2Q.':
+      !qOk?'Q* needs checking. Collect terms: 180 = 4Q.':
+      'P* needs checking. Substitute Q* = 45 back into demand.';
+  }
+}
+
+// ════════════════════════════════════════════════════
+// CANVAS 3 — Tax wedge placement
+// ════════════════════════════════════════════════════
+let cv3ctx=null;
+// Student places two draggable price lines
+let wedge={pc:150,pp:120}; // start well away from answer (Pc=130, Pp=90)
+let wedgeDrag=null;
+
+function initCv3(){
+  cv3ctx=initCv('cv3');
+  renderCv3();
+  setupCv3Events();
+  updateWedgeHint();
+}
+
+function renderCv3(){
+  if(!cv3ctx)return;
+  const ctx=cv3ctx;
+  ctx.clearRect(0,0,ctx.canvas.width,CH);
+  drawFrame(ctx);
+  const W=ctx.canvas.width;
+
+  // Just the original S and D — student figures out the rest
+  drawCurve(ctx,SC,SD,false,'#9e3015','S');
+  drawCurve(ctx,DA,DB,true,'#1a4a82','D');
+
+  // Pre-tax equilibrium dot (from step 2)
+  drawEqDot(ctx,Qs,Ps,'Q*=45','P*=110');
+
+  const pcY=sy(wedge.pc);
+  const ppY=sy(wedge.pp);
+  const gap=Math.round(wedge.pc-wedge.pp);
+  const DOT_R=9;
+  const axisX=PAD.l; // dots sit on the price axis
+
+  // Green wedge rectangle — only appears when both dots placed meaningfully apart
+  if(wedge.pc>wedge.pp+5){
+    ctx.fillStyle='rgba(26,110,56,0.10)';
+    ctx.fillRect(PAD.l,pcY,W-PAD.l-PAD.r,ppY-pcY);
+  }
+
+  // Dashed line from Pc dot across diagram
+  ctx.save();
+  ctx.strokeStyle='rgba(26,74,130,0.55)';
+  ctx.lineWidth=1.4;ctx.setLineDash([8,5]);
+  ctx.beginPath();ctx.moveTo(axisX,pcY);ctx.lineTo(W-PAD.r,pcY);ctx.stroke();
+  ctx.restore();
+
+  // Dashed line from Pp dot across diagram
+  ctx.save();
+  ctx.strokeStyle='rgba(158,48,21,0.55)';
+  ctx.lineWidth=1.4;ctx.setLineDash([8,5]);
+  ctx.beginPath();ctx.moveTo(axisX,ppY);ctx.lineTo(W-PAD.r,ppY);ctx.stroke();
+  ctx.restore();
+
+  // Wedge size bracket on right — shows gap in $ but no target
+  if(wedge.pc>wedge.pp+5){
+    const bx=W-PAD.r-20;
+    ctx.strokeStyle='rgba(26,110,56,0.6)';ctx.lineWidth=1.2;ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(bx,pcY);ctx.lineTo(bx+6,pcY);
+    ctx.lineTo(bx+6,ppY);ctx.lineTo(bx,ppY);
+    ctx.stroke();
+    ctx.fillStyle='rgba(26,110,56,0.75)';
+    ctx.font='bold 11px JetBrains Mono,monospace';
+    ctx.textAlign='left';
+    ctx.fillText('$'+gap,bx+10,(pcY+ppY)/2+4);
+  }
+
+  // Pc dot — blue, on price axis, draggable
+  ctx.save();
+  if(wedgeDrag==='pc'){
+    ctx.shadowColor='rgba(26,74,130,0.3)';ctx.shadowBlur=8;
+  }
+  ctx.beginPath();ctx.arc(axisX,pcY,DOT_R,0,Math.PI*2);
+  ctx.fillStyle=wedgeDrag==='pc'?'#1a4a82':'rgba(26,74,130,0.75)';
+  ctx.fill();
+  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
+  ctx.restore();
+  // Pc label inside dot
+  ctx.fillStyle='white';
+  ctx.font='bold 8px JetBrains Mono,monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('Pc',axisX,pcY);
+  ctx.textBaseline='alphabetic';
+
+  // Pp dot — red, on price axis, draggable
+  ctx.save();
+  if(wedgeDrag==='pp'){
+    ctx.shadowColor='rgba(158,48,21,0.3)';ctx.shadowBlur=8;
+  }
+  ctx.beginPath();ctx.arc(axisX,ppY,DOT_R,0,Math.PI*2);
+  ctx.fillStyle=wedgeDrag==='pp'?'#9e3015':'rgba(158,48,21,0.75)';
+  ctx.fill();
+  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle='white';
+  ctx.font='bold 8px JetBrains Mono,monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('Pp',axisX,ppY);
+  ctx.textBaseline='alphabetic';
+
+  // Price value labels next to dots
+  ctx.fillStyle='rgba(26,74,130,0.8)';
+  ctx.font='10px JetBrains Mono,monospace';
+  ctx.textAlign='left';
+  ctx.fillText(Math.round(wedge.pc),axisX+DOT_R+4,pcY+3.5);
+
+  ctx.fillStyle='rgba(158,48,21,0.8)';
+  ctx.fillText(Math.round(wedge.pp),axisX+DOT_R+4,ppY+3.5);
+}
+
+function updateWedgeHint(){
+  const gap=Math.round(wedge.pc-wedge.pp);
+  const el=E('wedge-size-hint');
+  if(gap>5){
+    el.textContent='Current wedge: $'+gap;
+    el.style.color='var(--ink-faint)';
+  } else {
+    el.textContent='';
+  }
+}
+
+function setupCv3Events(){
+  const cv=E('cv3');
+  const DOT_R=14; // hit zone radius (larger than visual for easier grabbing)
+
+  function getXY(e){
+    const r=cv.getBoundingClientRect();
+    const scx=cv.width/r.width, scy=cv.height/r.height;
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{x:(cx-r.left)*scx, y:(cy-r.top)*scy};
+  }
+
+  function hitDot(svgY, lineP){
+    // Hit test: within DOT_R pixels of the dot (which sits on PAD.l, lineP)
+    return Math.abs(svgY-sy(lineP))<DOT_R;
+  }
+
+  function start(e){
+    e.preventDefault();
+    const{y}=getXY(e);
+    if(hitDot(y,wedge.pc)) wedgeDrag='pc';
+    else if(hitDot(y,wedge.pp)) wedgeDrag='pp';
+    // Also allow dragging anywhere on the dashed line
+    else if(Math.abs(y-sy(wedge.pc))<10) wedgeDrag='pc';
+    else if(Math.abs(y-sy(wedge.pp))<10) wedgeDrag='pp';
+  }
+
+  function move(e){
+    e.preventDefault();
+    if(!wedgeDrag)return;
+    const{y}=getXY(e);
+    const newP=qdy(y);
+    if(wedgeDrag==='pc'){
+      wedge.pc=Math.max(wedge.pp+5,Math.min(MAXP*0.97,newP));
+    }else{
+      wedge.pp=Math.max(5,Math.min(wedge.pc-5,newP));
+    }
+    renderCv3();updateWedgeHint();
+  }
+
+  function end(e){e.preventDefault();wedgeDrag=null;renderCv3();}
+
+  cv.addEventListener('mousedown',start);
+  cv.addEventListener('mousemove',move);
+  cv.addEventListener('mouseup',end);
+  cv.addEventListener('mouseleave',end);
+  cv.addEventListener('touchstart',start,{passive:false});
+  cv.addEventListener('touchmove',move,{passive:false});
+  cv.addEventListener('touchend',end,{passive:false});
+}
+
+function chk3(){
+  const pcOk=Math.abs(wedge.pc-Pc)<=4;
+  const ppOk=Math.abs(wedge.pp-Pp)<=4;
+  const wedgeOk=Math.abs((wedge.pc-wedge.pp)-TAX)<=4;
+  const fb=E('fb3');
+
+  let lines=[];
+  if(pcOk) lines.push('<span class="line ok">✓ Consumer price Pc = 130 correctly placed.</span>');
+  else lines.push('<span class="line err">✗ Pc needs adjusting — should be '+Pc+' (currently ~'+Math.round(wedge.pc)+').</span>');
+  if(ppOk) lines.push('<span class="line ok">✓ Producer price Pp = 90 correctly placed.</span>');
+  else lines.push('<span class="line err">✗ Pp needs adjusting — should be '+Pp+' (currently ~'+Math.round(wedge.pp)+').</span>');
+  if(!wedgeOk&&pcOk&&ppOk===false) lines.push('<span class="line err">✗ Wedge size = $'+Math.round(wedge.pc-wedge.pp)+' — should equal the tax of $'+TAX+'.</span>');
+
+  fb.className='fb '+(pcOk&&ppOk?'ok':'err')+' show';
+  fb.innerHTML=lines.join('');
+
+  if(pcOk&&ppOk){
+    wedge={pc:Pc,pp:Pp};
+    renderCv3();
+    E('nb3').style.display='inline-block';
+  }
+}
+
+// ════════════════════════════════════════════════════
+// CANVAS 4 — Shading
+// ════════════════════════════════════════════════════
+let cv4ctx=null;
+let sh4={cs:false,ps:false,tax:false,dwl:false};
+let sel4=null,pts4=new Set(),strokePts4=[],painting4=false;
+
+function initCv4(){
+  cv4ctx=initCv('cv4');
+  renderCv4();
+  setupCv4Events();
+}
+
+function pCS4(){const p=[];p.push({x:sx(0),y:sy(DA)});for(let i=0;i<=60;i++){const Q=i/60*Qt;p.push({x:sx(Q),y:sy(DA-DB*Q)});}p.push({x:sx(Qt),y:sy(Pc)});p.push({x:sx(0),y:sy(Pc)});return p;}
+function pPS4(){const p=[];p.push({x:sx(0),y:sy(SC)});for(let i=0;i<=60;i++){const Q=i/60*Qt;p.push({x:sx(Q),y:sy(SC+SD*Q)});}p.push({x:sx(Qt),y:sy(Pp)});p.push({x:sx(0),y:sy(Pp)});return p;}
+function pTax4(){return[{x:sx(0),y:sy(Pc)},{x:sx(Qt),y:sy(Pc)},{x:sx(Qt),y:sy(Pp)},{x:sx(0),y:sy(Pp)}];}
+function pDWL4(){const p=[];p.push({x:sx(Qt),y:sy(Pc)});for(let i=0;i<=30;i++){const Q=Qt+(i/30)*(Qs-Qt);p.push({x:sx(Q),y:sy(DA-DB*Q)});}for(let i=30;i>=0;i--){const Q=Qt+(i/30)*(Qs-Qt);p.push({x:sx(Q),y:sy(SC+SD*Q)});}p.push({x:sx(Qt),y:sy(Pp)});return p;}
+
+function calcCoverage(pts,poly){
+  if(pts.size===0)return{pct:0,missRatio:0};
+  // Count painted pixels inside vs outside
+  let hit=0,miss=0;
+  pts.forEach(k=>{
+    const[x,y]=k.split(',').map(Number);
+    if(ptInPoly(x,y,poly))hit++;else miss++;
+  });
+  // Estimate total fillable pixels by sampling the polygon at 4px grid
+  // This is computed once and cached per polygon
+  let total=0;
+  const bbox=polyBBox(poly);
+  for(let x=bbox.x0;x<=bbox.x1;x+=4){
+    for(let y=bbox.y0;y<=bbox.y1;y+=4){
+      if(ptInPoly(x,y,poly))total++;
+    }
+  }
+  const pct=total>0?Math.round(Math.min(1,hit/total)*100):0;
+  return{pct,missRatio:miss/(hit+miss+1)};
+}
+
+function polyBBox(poly){
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  poly.forEach(p=>{x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);});
+  return{x0:Math.floor(x0),x1:Math.ceil(x1),y0:Math.floor(y0),y1:Math.ceil(y1)};
+}
+
+function renderCv4(){
+  if(!cv4ctx)return;
+  const ctx=cv4ctx;ctx.clearRect(0,0,ctx.canvas.width,CH);
+  drawFrame(ctx);
+
+  const pcY=sy(Pc),ppY=sy(Pp),qtX=sx(Qt),qsX=sx(Qs);
+
+  // Ghost boundaries for shading guidance
+  ctx.save();ctx.setLineDash([3,4]);ctx.lineWidth=0.8;
+  ctx.strokeStyle='rgba(26,74,130,0.18)';
+  ctx.beginPath();ctx.moveTo(PAD.l,pcY);ctx.lineTo(qtX,pcY);ctx.stroke();
+  ctx.strokeStyle='rgba(158,48,21,0.18)';
+  ctx.beginPath();ctx.moveTo(PAD.l,ppY);ctx.lineTo(qtX,ppY);ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,0.10)';
+  ctx.beginPath();ctx.moveTo(qtX,sy(DA-DB*Qt));ctx.lineTo(qtX,CH-PAD.b);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(qsX,sy(DA-DB*Qs));ctx.lineTo(qsX,sy(SC+SD*Qs));ctx.stroke();
+  ctx.restore();
+
+  // Tax wedge rectangle — the $40 gap between Pc and Pp
+  ctx.fillStyle='rgba(26,110,56,0.10)';
+  ctx.fillRect(PAD.l,pcY,qtX-PAD.l,ppY-pcY);
+
+  // Accepted shadings drawn before curves so curves sit on top
+  const fills={cs:'rgba(26,74,130,0.15)',ps:'rgba(158,48,21,0.15)',tax:'rgba(26,110,56,0.20)',dwl:'rgba(94,26,138,0.15)'};
+  const polys={cs:pCS4(),ps:pPS4(),tax:pTax4(),dwl:pDWL4()};
+  const lbls={
+    cs:{x:sx(Qt*0.13),y:sy(DA-(DA-Pc)*0.3),t:'CS',c:'#1a4a82'},
+    ps:{x:sx(Qt*0.13),y:sy(SC+(Pp-SC)*0.4),t:'PS',c:'#9e3015'},
+    tax:{x:sx(Qt*0.44),y:sy((Pc+Pp)/2)+4,t:'TR',c:'#1a6e38'},
+    dwl:{x:sx(Qt+(Qs-Qt)*0.5),y:sy((Pc+Pp)/2)+4,t:'DWL',c:'#5e1a8a'}
+  };
+  ['cs','ps','tax','dwl'].forEach(k=>{
+    if(!sh4[k])return;
+    const poly=polys[k];
+    ctx.save();ctx.fillStyle=fills[k];
+    ctx.beginPath();poly.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.closePath();ctx.fill();ctx.restore();
+    const l=lbls[k];
+    ctx.fillStyle=l.c;ctx.font='italic 12px Playfair Display,serif';
+    ctx.textAlign='center';ctx.fillText(l.t,l.x,l.y);
+  });
+
+  // Live painting preview
+  if(painting4&&sel4&&strokePts4.length>0){
+    const colors={cs:'rgba(26,74,130,0.28)',ps:'rgba(158,48,21,0.28)',tax:'rgba(26,110,56,0.28)',dwl:'rgba(94,26,138,0.28)'};
+    ctx.save();ctx.strokeStyle=colors[sel4];ctx.lineWidth=9;ctx.lineCap='round';ctx.lineJoin='round';
+    let lp=null;
+    strokePts4.forEach(p=>{
+      if(!lp||Math.hypot(p.x-lp.x,p.y-lp.y)>28){ctx.beginPath();ctx.moveTo(p.x,p.y);}
+      else{ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);}
+      lp=p;
+    });
+    ctx.stroke();ctx.restore();
+  }
+
+  // Original S and D — no S' curve, wedge replaces it
+  drawCurve(ctx,SC,SD,false,'#9e3015','S');
+  drawCurve(ctx,DA,DB,true,'#1a4a82','D');
+
+  // Pre-tax eq ghost
+  ctx.beginPath();ctx.arc(qsX,sy(Ps),3.5,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.28)';ctx.font='10px JetBrains Mono';
+  ctx.textAlign='left';ctx.fillText('E₀',qsX+5,sy(Ps)-3);
+
+  // New equilibrium at top of wedge (Pc)
+  const ex=qtX,ey=pcY;
+  ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex,CH-PAD.b);
+  ctx.moveTo(ex,ey);ctx.lineTo(PAD.l,ey);ctx.stroke();ctx.restore();
+  ctx.save();ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
+  ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fillStyle='#1c1810';ctx.fill();ctx.restore();
+
+  // Price axis labels — Pc, Pp, Q*t (earned from step 3)
+  ctx.fillStyle='rgba(0,0,0,0.42)';ctx.font='10px JetBrains Mono';
+  ctx.textAlign='center';ctx.fillText('Q*ₜ=35',ex,CH-PAD.b+13);
+  ctx.textAlign='right';ctx.fillText('Pc=130',PAD.l-6,ey+3.5);
+  ctx.fillText('Pp=90',PAD.l-6,ppY+3.5);
+
+  // Wedge bracket on right side
+  const bx=ctx.canvas.width-PAD.r-20;
+  ctx.strokeStyle='rgba(26,110,56,0.6)';ctx.lineWidth=1.2;ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(bx,pcY);ctx.lineTo(bx+6,pcY);ctx.lineTo(bx+6,ppY);ctx.lineTo(bx,ppY);ctx.stroke();
+  ctx.fillStyle='rgba(26,110,56,0.75)';ctx.font='10px JetBrains Mono';
+  ctx.textAlign='left';ctx.fillText('t=40',bx+9,(pcY+ppY)/2+4);
+}
+
+function psel(id){
+  if(sel4!==id){pts4=new Set();strokePts4=[];}
+  sel4=id;
+  document.querySelectorAll('[id^="pb4-"]').forEach(b=>b.classList.remove('sel'));
+  E('pb4-'+id).classList.add('sel');
+  renderCv4();updateCovDisplay();
+}
+
+function updateCovDisplay(){
+  if(!sel4||pts4.size===0){
+    E('cov-fill').style.width='0%';
+    E('shade-note').textContent='Select a region above, then drag to paint.';
+    return;
+  }
+  const polys={cs:pCS4(),ps:pPS4(),tax:pTax4(),dwl:pDWL4()};
+  const{pct}=calcCoverage(pts4,polys[sel4]);
+  E('cov-fill').style.width=Math.min(100,pct)+'%';
+  const names={cs:'Consumer surplus',ps:'Producer surplus',tax:'Tax revenue',dwl:'Deadweight loss'};
+  E('shade-note').textContent=names[sel4]+' — '+pct+'% covered';
+}
+
+function chkShade(){
+  if(!sel4){setFb('fb4','hint','Select a region first.');return;}
+  if(pts4.size===0){setFb('fb4','hint','Paint over the region on the diagram, then click Check.');return;}
+  const polys={cs:pCS4(),ps:pPS4(),tax:pTax4(),dwl:pDWL4()};
+  const{pct,missRatio}=calcCoverage(pts4,polys[sel4]);
+  const th=sel4==='dwl'?35:50;
+  const mth=sel4==='dwl'?0.65:0.50;
+  const hints={
+    cs:'CS is above Pc=130 and below the demand curve — the upper-left triangle.',
+    ps:'PS is above the original supply (dashed) and below Pp=90 — the lower-left triangle.',
+    tax:'Tax revenue is the rectangle between Pc=130 and Pp=90, from the axis to Q*ₜ=35.',
+    dwl:'DWL is the small triangle between Q*ₜ=35 and Q*=45.'
+  };
+  if(pct>=th&&missRatio<mth){
+    sh4[sel4]=true;pts4=new Set();strokePts4=[];
+    E('pb4-'+sel4).classList.add('placed','ok');
+    const names={cs:'Consumer surplus',ps:'Producer surplus',tax:'Tax revenue',dwl:'Deadweight loss'};
+    E('pb4-'+sel4).querySelector('.pname').textContent=names[sel4]+' ✓';
+    sel4=null;
+    document.querySelectorAll('[id^="pb4-"]').forEach(b=>b.classList.remove('sel'));
+    renderCv4();updateCovDisplay();
+    const rem=Object.keys(sh4).filter(k=>!sh4[k]);
+    if(rem.length===0){setFb('fb4','ok','All four regions correctly identified.');E('nb4').style.display='inline-block';}
+    else setFb('fb4','ok','Correct — now shade: '+rem.join(', ')+'.');
+  }else if(pct<th){
+    flashCanvas('cv4');
+    setFb('fb4','err','Only '+pct+'% coverage — keep painting within the region, then check again.');
+  }else{
+    pts4=new Set();strokePts4=[];renderCv4();updateCovDisplay();
+    const names={cs:'Consumer surplus',ps:'Producer surplus',tax:'Tax revenue',dwl:'Deadweight loss'};
+    const btn=E('pb4-'+sel4);if(btn)btn.querySelector('.pname').textContent=names[sel4];
+    flashCanvas('cv4');
+    setFb('fb4','err','Too much outside the region. Strokes cleared. '+hints[sel4]);
+  }
+}
+
+function revealS4(){
+  sh4={cs:true,ps:true,tax:true,dwl:true};pts4=new Set();strokePts4=[];painting4=false;
+  document.querySelectorAll('[id^="pb4-"]').forEach(b=>{
+    b.classList.add('placed','ok');
+    const names={cs:'Consumer surplus',ps:'Producer surplus',tax:'Tax revenue',dwl:'Deadweight loss'};
+    const k=b.id.replace('pb4-','');b.querySelector('.pname').textContent=names[k]+' ✓';
+  });
+  renderCv4();setFb('fb4','hint','All regions revealed.');
+  E('nb4').style.display='inline-block';
+}
+
+function setupCv4Events(){
+  const cv=E('cv4');
+  let down=false;
+  function getXY(e){
+    const r=cv.getBoundingClientRect();
+    const sc=cv.width/r.width,sy_=cv.height/r.height;
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{x:Math.round((cx-r.left)*sc),y:Math.round((cy-r.top)*sy_)};
+  }
+  function paint(x,y){
+    const br=6;
+    for(let dx=-br;dx<=br;dx+=2)for(let dy=-br;dy<=br;dy+=2){
+      if(dx*dx+dy*dy>br*br*1.1)continue;
+      const px=x+dx,py=y+dy;
+      if(px>PAD.l&&px<cv.width-PAD.r&&py>PAD.t&&py<CH-PAD.b)pts4.add(px+','+py);
+    }
+    strokePts4.push({x,y});
+    renderCv4();updateCovDisplay();
+  }
+  cv.addEventListener('mousedown',e=>{
+    if(!sel4)return;
+    down=true;painting4=true;
+    // Don't reset pts — accumulate across multiple strokes
+    // pts4 only resets when switching regions (handled in psel)
+    const p=getXY(e);paint(p.x,p.y);
+  });
+  cv.addEventListener('mousemove',e=>{if(!down)return;const p=getXY(e);paint(p.x,p.y);});
+  cv.addEventListener('mouseup',e=>{
+    if(!down)return;down=false;painting4=false;
+    renderCv4();updateCovDisplay(); // keep strokes visible
+  });
+  cv.addEventListener('mouseleave',e=>{
+    if(!down)return;down=false;painting4=false;
+    renderCv4();updateCovDisplay(); // keep strokes visible
+  });
+  cv.addEventListener('touchstart',e=>{e.preventDefault();if(!sel4)return;down=true;painting4=true;pts4=new Set();strokePts4=[];const p=getXY(e);paint(p.x,p.y);},{passive:false});
+  cv.addEventListener('touchmove',e=>{e.preventDefault();if(!down)return;const p=getXY(e);paint(p.x,p.y);},{passive:false});
+  cv.addEventListener('touchend',e=>{e.preventDefault();if(!down)return;down=false;painting4=false;renderCv4();},{passive:false});
+}
+
+// ════════════════════════════════════════════════════
+// STEP 5 — Welfare checks
+// ════════════════════════════════════════════════════
+function chk5(){
+  const ans={cs:CS_,ps:PS_,tr:TR_,dwl:DWL_,ts:TS_,ts0:TS0_};
+  const ids={cs:'w-cs',ps:'w-ps',tr:'w-tr',dwl:'w-dwl',ts:'w-ts',ts0:'w-ts0'};
+  let ok=true;
+  Object.keys(ans).forEach(k=>{
+    const el=E(ids[k]),good=Math.abs(+el.value-ans[k])<=5;
+    el.className=good?'ok':'wrong';if(!good)ok=false;
+  });
+  if(ok){
+    setFb('fb5','ok','All correct. Pre-tax surplus 4,050 minus post-tax 3,850 = DWL of 200. The permanent efficiency cost of the transit fee.');
+    E('nb5').style.display='inline-block';
+  }else setFb('fb5','err','Some values need checking. Use the hint for formulas.');
+}
+
+// ════════════════════════════════════════════════════
+// STEP MANAGEMENT
+// ════════════════════════════════════════════════════
+let stepsCompleted=0;
+function tog(id){const el=E(id);if(el.classList.contains('locked'))return;el.classList.toggle('open');}
+function nxt(n){
+  const el=E('s'+n);el.classList.add('done');el.classList.remove('open');
+  E('dot'+n).textContent='✓';
+  const nx=E('s'+(n+1));if(nx){nx.classList.remove('locked');nx.classList.add('open');}
+  stepsCompleted=Math.max(stepsCompleted,n);
+  E('prog').style.width=(stepsCompleted/5*100)+'%';
+  if(n===1)initCv2();
+  if(n===2)initCv3();
+  if(n===3)initCv4();
+}
+
+function togEl(id,btnId){
+  const el=E(id);const btn=btnId?E(btnId):null;
+  const showing=el.classList.contains('show');
+  el.classList.toggle('show',!showing);
+  if(btn)btn.classList.toggle('active',!showing);
+}
+
+function setFb(id,type,msg){
+  const el=E(id);el.className='fb '+type+' show';el.innerHTML=msg;
+}
+
+function flashCanvas(id){
+  const cv=E(id);cv.style.outline='3px solid rgba(158,48,21,0.5)';
+  setTimeout(()=>cv.style.outline='none',600);
+}
+
+function E(id){return document.getElementById(id);}
+
+function toggleHelp(){
+  const o=E('help-overlay');
+  o.style.display=o.style.display==='none'?'flex':'none';
+}
+
+let devMode=false;
+function toggleDev(){
+  devMode=!devMode;
+  const btn=E('dev-btn');
+  btn.style.background=devMode?'rgba(255,200,0,0.25)':'rgba(255,255,255,0.08)';
+  btn.style.color=devMode?'rgba(255,220,0,0.9)':'rgba(255,255,255,0.45)';
+  btn.textContent=devMode?'dev ✓':'dev';
+  if(devMode){
+    // Unlock all steps and init all canvases
+    ['s1','s2','s3','s4','s5','s6'].forEach(id=>{
+      const el=E(id);if(!el)return;
+      el.classList.remove('locked');
+      el.classList.add('open');
+    });
+    // Snap curves to correct for dev mode so later steps work
+    c1={da:DA,db:DB,sc:SC,sd:SD};
+    wedge={pc:Pc,pp:Pp};
+    sh4={cs:false,ps:false,tax:false,dwl:false};
+    // Init all canvases
+    initCv1();initCv2();initCv3();initCv4();
+    stepsCompleted=5;
+    E('prog').style.width='100%';
+  }
+}
+
+// roundRect polyfill for older browsers
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    this.beginPath();this.moveTo(x+r,y);this.lineTo(x+w-r,y);
+    this.arcTo(x+w,y,x+w,y+r,r);this.lineTo(x+w,y+h-r);
+    this.arcTo(x+w,y+h,x+w-r,y+h,r);this.lineTo(x+r,y+h);
+    this.arcTo(x,y+h,x,y+h-r,r);this.lineTo(x,y+r);
+    this.arcTo(x,y,x+r,y,r);this.closePath();
+  };
+}
+
+// Init
+window.addEventListener('load',()=>{
+  initCv1();
+  window.addEventListener('resize',()=>{
+    if(E('s1').classList.contains('open')||E('s1').classList.contains('done'))initCv1();
+  });
+});
+</script>
+</body>
+</html>
