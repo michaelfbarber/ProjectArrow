@@ -3,140 +3,449 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Project Arrow — Supply & Demand</title>
+<title>Project Arrow</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --d-color: #1a5fa8;
-    --d-light: #e8f1fb;
-    --s-color: #b33a1a;
-    --s-light: #fbeee9;
-    --bg: #fafaf7;
-    --panel: #fff;
-    --text: #1a1a1a;
-    --muted: #666;
-    --border: #ddd;
+    --d: #1a4f8a;
+    --d-light: rgba(26,79,138,0.12);
+    --s: #a83218;
+    --s-light: rgba(168,50,24,0.12);
+    --dwl: rgba(90,20,130,0.14);
+    --dwl-c: #6a1a9a;
+    --tax-c: #1a7a3c;
+    --tax-fill: rgba(26,122,60,0.12);
+    --ink: #1a1814;
+    --mid: #5a5650;
+    --faint: #9a9690;
+    --rule: #e0ddd6;
+    --bg: #f7f5f0;
+    --panel: #fdfcf9;
+    --tab-bg: #f0ede6;
+    --active: #1a1814;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Georgia, serif; background: var(--bg); color: var(--text); }
-  header { padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; align-items: baseline; gap: 16px; }
-  header h1 { font-size: 16px; font-weight: normal; letter-spacing: 0.05em; }
-  header span { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; }
-  .layout { display: grid; grid-template-columns: 1fr 290px; min-height: calc(100vh - 47px); }
-  .diagram-area { padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px; }
-  canvas { display: block; width: 100%; background: var(--panel); border: 1px solid var(--border); cursor: crosshair; touch-action: none; }
-  .drag-hint { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; text-align: center; }
-  .algebra-block { background: var(--panel); border: 1px solid var(--border); padding: 10px 14px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.9; color: var(--text); }
-  .algebra-block .cm { color: var(--muted); }
-  .sidebar { border-left: 1px solid var(--border); background: var(--panel); overflow-y: auto; }
-  .ss { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-  .ss h3 { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-weight: normal; font-family: 'Courier New', monospace; }
-  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-  .param-item label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 2px; font-family: 'Courier New', monospace; }
-  .param-item input { width: 100%; padding: 4px 7px; font-size: 12px; font-family: 'Courier New', monospace; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-  .eq-label { font-size: 12px; font-style: italic; margin-bottom: 5px; }
-  .eq-label.d { color: var(--d-color); }
-  .eq-label.s { color: var(--s-color); }
-  .shift-row { display: flex; gap: 5px; align-items: center; margin-bottom: 6px; }
-  .shift-row span { font-size: 12px; font-style: italic; min-width: 46px; }
-  .shift-row span.d { color: var(--d-color); }
-  .shift-row span.s { color: var(--s-color); }
-  .sb { flex: 1; padding: 4px 0; font-size: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-family: Georgia, serif; }
-  .sb:hover { background: #f0f0ec; }
-  .sa { width: 44px; padding: 4px 5px; font-size: 11px; font-family: 'Courier New', monospace; border: 1px solid var(--border); background: var(--bg); color: var(--text); text-align: center; }
-  .iv-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
-  .iv-row label { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; min-width: 72px; }
-  .iv-row input { flex: 1; padding: 4px 7px; font-size: 12px; font-family: 'Courier New', monospace; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-  .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .ob { padding: 6px 4px; font-size: 11px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; text-align: center; font-family: 'Courier New', monospace; }
-  .ob:hover { color: var(--text); border-color: #aaa; }
-  .ob.a-cs { background: #e8f1fb; border-color: var(--d-color); color: var(--d-color); }
-  .ob.a-ps { background: #fbeee9; border-color: var(--s-color); color: var(--s-color); }
-  .ob.a-dwl { background: rgba(100,0,150,0.08); border-color: #7a2a9a; color: #7a2a9a; }
-  .ob.a-tax { background: rgba(30,140,60,0.1); border-color: #1a8a3c; color: #1a8a3c; }
-  .ob.a-floor { background: #fff8e0; border-color: #c8960a; color: #8a6200; }
-  .ob.a-ceil { background: #fff0f0; border-color: #c83030; color: #8a1a1a; }
-  .rt { width: 100%; font-size: 12px; border-collapse: collapse; }
-  .rt td { padding: 3px 0; border-bottom: 1px solid #f0f0ea; }
-  .rt tr:last-child td { border: none; }
-  .rt td:first-child { color: var(--muted); font-family: 'Courier New', monospace; font-size: 11px; }
-  .rt td:last-child { text-align: right; font-family: 'Courier New', monospace; font-weight: bold; }
-  .rcs { color: var(--d-color); }
-  .rps { color: var(--s-color); }
-  .rdwl { color: #7a2a9a; }
-  .rtax { color: #1a8a3c; }
-  .reset-btn { width: 100%; padding: 7px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; font-family: 'Courier New', monospace; }
-  .reset-btn:hover { background: #f0f0ec; color: var(--text); }
-  .sc-sel { width: 100%; padding: 5px 7px; font-size: 12px; font-family: Georgia, serif; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 8px; cursor: pointer; }
-  .sc-text { font-size: 12px; line-height: 1.6; font-style: italic; color: var(--text); }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Header ---- */
+  .hdr {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 12px 20px 11px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--rule);
+  }
+  .hdr-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .hdr-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--faint);
+    letter-spacing: 0.04em;
+  }
+
+  /* ---- Scenario bar ---- */
+  .scenario-bar {
+    background: var(--panel);
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .scenario-bar label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--faint);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .scenario-select {
+    flex: 1;
+    max-width: 380px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    border: 1px solid var(--rule);
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .scenario-text {
+    font-size: 13px;
+    color: var(--mid);
+    font-style: italic;
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  /* ---- Main layout ---- */
+  .main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 20px 0;
+    gap: 0;
+    flex: 1;
+  }
+
+  /* ---- Diagram ---- */
+  .diagram-wrap {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 4px;
+    width: 100%;
+    max-width: 560px;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    touch-action: none;
+    cursor: crosshair;
+    border-radius: 2px;
+  }
+  .drag-hint {
+    text-align: center;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--faint);
+    padding: 5px 0 3px;
+  }
+
+  /* ---- Tab panel ---- */
+  .tab-panel {
+    width: 100%;
+    max-width: 560px;
+    margin-top: 14px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--rule);
+    background: var(--tab-bg);
+  }
+  .tab {
+    flex: 1;
+    padding: 9px 6px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+    text-align: center;
+    cursor: pointer;
+    color: var(--faint);
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s;
+  }
+  .tab:hover { color: var(--mid); }
+  .tab.active {
+    color: var(--active);
+    background: var(--panel);
+    border-bottom: 2px solid var(--active);
+    font-weight: 500;
+  }
+
+  .tab-content { display: none; padding: 16px 18px; }
+  .tab-content.active { display: block; }
+
+  /* ---- Algebra tab ---- */
+  .alg {
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    line-height: 2;
+    color: var(--ink);
+  }
+  .alg .cm { color: var(--faint); }
+  .alg .hi { color: var(--ink); font-weight: 500; }
+  .alg .sep { border: none; border-top: 1px solid var(--rule); margin: 8px 0; }
+
+  /* ---- Results row ---- */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .result-card {
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .result-card .rc-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--faint);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .result-card .rc-val {
+    font-size: 15px;
+    font-family: 'DM Serif Display', serif;
+    color: var(--ink);
+  }
+  .rc-cs .rc-val { color: var(--d); }
+  .rc-ps .rc-val { color: var(--s); }
+  .rc-dwl .rc-val { color: var(--dwl-c); }
+  .rc-tax .rc-val { color: var(--tax-c); }
+
+  /* ---- Controls tab ---- */
+  .ctrl-section { margin-bottom: 16px; }
+  .ctrl-section:last-child { margin-bottom: 0; }
+  .ctrl-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .eq-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .eq-name {
+    font-size: 13px;
+    font-style: italic;
+    min-width: 100px;
+    font-family: 'DM Serif Display', serif;
+  }
+  .eq-name.d { color: var(--d); }
+  .eq-name.s { color: var(--s); }
+  .param-pair { display: flex; gap: 6px; flex: 1; }
+  .param-item { flex: 1; }
+  .param-item label { display: block; font-size: 10px; color: var(--faint); font-family: 'DM Mono', monospace; margin-bottom: 2px; }
+  .param-item input[type="number"] {
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    border: 1px solid var(--rule);
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: 2px;
+  }
+  .param-item input:focus { outline: none; border-color: var(--faint); }
+
+  .shift-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .shift-name { font-size: 12px; font-style: italic; min-width: 56px; font-family: 'DM Serif Display', serif; }
+  .shift-name.d { color: var(--d); }
+  .shift-name.s { color: var(--s); }
+  .shift-btn {
+    flex: 1; padding: 5px 0; font-size: 13px;
+    border: 1px solid var(--rule); background: var(--bg); color: var(--ink);
+    border-radius: 2px; cursor: pointer;
+  }
+  .shift-btn:hover { background: var(--tab-bg); }
+  .shift-amt {
+    width: 46px; padding: 5px 5px; font-size: 11px;
+    font-family: 'DM Mono', monospace; border: 1px solid var(--rule);
+    background: var(--bg); color: var(--ink); text-align: center; border-radius: 2px;
+  }
+
+  .iv-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .iv-row label { font-size: 12px; color: var(--mid); font-family: 'DM Mono', monospace; min-width: 90px; font-size: 11px; }
+  .iv-row input {
+    flex: 1; padding: 5px 8px; font-size: 12px;
+    font-family: 'DM Mono', monospace; border: 1px solid var(--rule);
+    background: var(--bg); color: var(--ink); border-radius: 2px;
+  }
+
+  /* ---- Overlay tab ---- */
+  .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 14px; }
+  .ov-btn {
+    padding: 8px 6px; font-size: 12px; font-family: 'DM Mono', monospace;
+    border: 1px solid var(--rule); background: var(--bg); color: var(--faint);
+    border-radius: 3px; cursor: pointer; text-align: center; transition: all 0.1s;
+  }
+  .ov-btn:hover { color: var(--ink); border-color: var(--mid); }
+  .ov-btn.a-cs { background: var(--d-light); border-color: var(--d); color: var(--d); }
+  .ov-btn.a-ps { background: var(--s-light); border-color: var(--s); color: var(--s); }
+  .ov-btn.a-dwl { background: var(--dwl); border-color: var(--dwl-c); color: var(--dwl-c); }
+  .ov-btn.a-tax { background: var(--tax-fill); border-color: var(--tax-c); color: var(--tax-c); }
+  .ov-btn.a-floor { background: #fdf5dc; border-color: #c8920a; color: #7a5800; }
+  .ov-btn.a-ceil { background: #fdeaea; border-color: #c83030; color: #8a1a1a; }
+
+  .reset-btn {
+    width: 100%; padding: 8px; font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; border: 1px solid var(--rule); background: var(--bg);
+    color: var(--faint); border-radius: 3px; cursor: pointer; font-family: 'DM Mono', monospace;
+    margin-top: 8px;
+  }
+  .reset-btn:hover { color: var(--ink); background: var(--tab-bg); }
+
+  /* ---- Eq summary bar ---- */
+  .eq-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 20px;
+    background: var(--panel);
+    border-top: 1px solid var(--rule);
+    margin-top: 14px;
+    width: 100%;
+    max-width: 560px;
+  }
+  .eq-stat { text-align: center; }
+  .eq-stat-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .eq-stat-val { font-size: 16px; font-family: 'DM Serif Display', serif; color: var(--ink); }
+  .eq-divider { width: 1px; height: 28px; background: var(--rule); }
+
+  @media (max-width: 600px) {
+    .scenario-bar { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .results-grid { grid-template-columns: repeat(2, 1fr); }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Project Arrow</h1>
-  <span>supply &amp; demand — v0.1</span>
-</header>
-<div class="layout">
-  <div class="diagram-area">
-    <canvas id="cv" height="460"></canvas>
-    <div class="drag-hint">drag either curve · or use shift buttons</div>
-    <div class="algebra-block" id="alg"></div>
-  </div>
-  <div class="sidebar">
-    <div class="ss">
-      <h3>Scenario</h3>
-      <select class="sc-sel" id="sc-sel" onchange="loadScenario()">
-        <option value="">— blank —</option>
-        <option value="hormuz">Oil: Strait of Hormuz closure</option>
-        <option value="vancouver">Housing: Vancouver rent ceiling</option>
-        <option value="minwage">Labour: BC minimum wage</option>
-        <option value="gastax">Excise tax: gasoline</option>
-        <option value="carbon">Carbon tax: Canadian oil</option>
-      </select>
-      <div class="sc-text" id="sc-text"></div>
-    </div>
-    <div class="ss">
-      <h3>Equations</h3>
-      <div class="eq-label d">D: P = a − b·Q</div>
-      <div class="param-grid" style="margin-bottom:10px">
-        <div class="param-item"><label>a (intercept)</label><input type="number" id="da" value="100" step="5" onchange="fromInputs()"></div>
-        <div class="param-item"><label>b (slope)</label><input type="number" id="db" value="2" step="0.5" min="0.1" onchange="fromInputs()"></div>
-      </div>
-      <div class="eq-label s">S: P = c + d·Q</div>
-      <div class="param-grid">
-        <div class="param-item"><label>c (intercept)</label><input type="number" id="sc" value="10" step="5" onchange="fromInputs()"></div>
-        <div class="param-item"><label>d (slope)</label><input type="number" id="sd" value="2" step="0.5" min="0.1" onchange="fromInputs()"></div>
-      </div>
-    </div>
-    <div class="ss">
-      <h3>Shift curves</h3>
-      <div class="shift-row"><span class="d">Demand</span><button class="sb" onclick="shift('D',-1)">◀</button><button class="sb" onclick="shift('D',1)">▶</button><input type="number" class="sa" id="amt-d" value="10" step="5" min="1"></div>
-      <div class="shift-row"><span class="s">Supply</span><button class="sb" onclick="shift('S',-1)">◀</button><button class="sb" onclick="shift('S',1)">▶</button><input type="number" class="sa" id="amt-s" value="10" step="5" min="1"></div>
-    </div>
-    <div class="ss">
-      <h3>Interventions</h3>
-      <div class="iv-row"><label>excise tax</label><input type="number" id="tax" value="0" step="5" min="0" onchange="fromInputs()"></div>
-      <div class="iv-row"><label>price floor</label><input type="number" id="floor" value="0" step="5" min="0" onchange="fromInputs()"></div>
-      <div class="iv-row"><label>price ceiling</label><input type="number" id="ceil" value="0" step="5" min="0" onchange="fromInputs()"></div>
-    </div>
-    <div class="ss">
-      <h3>Show / hide</h3>
-      <div class="ov-grid">
-        <button class="ob" id="b-cs" onclick="tog('cs')">CS</button>
-        <button class="ob" id="b-ps" onclick="tog('ps')">PS</button>
-        <button class="ob" id="b-dwl" onclick="tog('dwl')">DWL</button>
-        <button class="ob" id="b-tax" onclick="tog('tax')">tax rev</button>
-        <button class="ob" id="b-floor" onclick="tog('floor')">floor</button>
-        <button class="ob" id="b-ceil" onclick="tog('ceil')">ceiling</button>
-      </div>
-    </div>
-    <div class="ss">
-      <h3>Calculations</h3>
-      <table class="rt" id="rt"></table>
-    </div>
-    <div class="ss"><button class="reset-btn" onclick="reset()">reset</button></div>
-  </div>
+
+<div class="hdr">
+  <span class="hdr-title">Project Arrow</span>
+  <span class="hdr-sub">supply &amp; demand — v0.2</span>
 </div>
+
+<div class="scenario-bar">
+  <label>Scenario</label>
+  <select class="scenario-select" id="sc-sel" onchange="loadScenario()">
+    <option value="">— blank diagram —</option>
+    <option value="hormuz">Oil: Strait of Hormuz closure</option>
+    <option value="vancouver">Housing: Vancouver rent ceiling</option>
+    <option value="minwage">Labour: BC minimum wage</option>
+    <option value="gastax">Excise tax: gasoline</option>
+    <option value="carbon">Carbon tax: Canadian oil</option>
+  </select>
+  <div class="scenario-text" id="sc-text"></div>
+</div>
+
+<div class="main">
+
+  <div class="diagram-wrap">
+    <canvas id="cv" height="300"></canvas>
+    <div class="drag-hint">drag either curve · or use controls tab</div>
+  </div>
+
+  <!-- Equilibrium summary -->
+  <div class="eq-bar" id="eq-bar">
+    <div class="eq-stat"><div class="eq-stat-label">Q*</div><div class="eq-stat-val" id="es-q">—</div></div>
+    <div class="eq-divider"></div>
+    <div class="eq-stat"><div class="eq-stat-label">P*</div><div class="eq-stat-val" id="es-p">—</div></div>
+    <div class="eq-divider"></div>
+    <div class="eq-stat"><div class="eq-stat-label">CS</div><div class="eq-stat-val" id="es-cs" style="color:var(--d)">—</div></div>
+    <div class="eq-divider"></div>
+    <div class="eq-stat"><div class="eq-stat-label">PS</div><div class="eq-stat-val" id="es-ps" style="color:var(--s)">—</div></div>
+    <div class="eq-divider"></div>
+    <div class="eq-stat"><div class="eq-stat-label">Total surplus</div><div class="eq-stat-val" id="es-ts">—</div></div>
+  </div>
+
+  <!-- Tab panel -->
+  <div class="tab-panel">
+    <div class="tab-bar">
+      <button class="tab active" onclick="showTab('algebra',this)">algebra</button>
+      <button class="tab" onclick="showTab('overlays',this)">overlays</button>
+      <button class="tab" onclick="showTab('controls',this)">controls</button>
+    </div>
+
+    <!-- Algebra -->
+    <div class="tab-content active" id="tab-algebra">
+      <div class="alg" id="alg"></div>
+    </div>
+
+    <!-- Overlays -->
+    <div class="tab-content" id="tab-overlays">
+      <div class="ctrl-label">Show / hide regions</div>
+      <div class="ov-grid">
+        <button class="ov-btn" id="b-cs" onclick="tog('cs')">Consumer surplus</button>
+        <button class="ov-btn" id="b-ps" onclick="tog('ps')">Producer surplus</button>
+        <button class="ov-btn" id="b-dwl" onclick="tog('dwl')">Deadweight loss</button>
+        <button class="ov-btn" id="b-tax" onclick="tog('tax')">Tax revenue</button>
+        <button class="ov-btn" id="b-floor" onclick="tog('floor')">Price floor</button>
+        <button class="ov-btn" id="b-ceil" onclick="tog('ceil')">Price ceiling</button>
+      </div>
+      <div class="ctrl-label" style="margin-top:4px">Results</div>
+      <div class="results-grid" id="results-grid"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="tab-content" id="tab-controls">
+      <div class="ctrl-section">
+        <div class="ctrl-label">Equations</div>
+        <div class="eq-row">
+          <span class="eq-name d">D: P = a − b·Q</span>
+          <div class="param-pair">
+            <div class="param-item"><label>a</label><input type="number" id="da" value="100" step="5" onchange="fromInputs()"></div>
+            <div class="param-item"><label>b</label><input type="number" id="db" value="2" step="0.5" min="0.1" onchange="fromInputs()"></div>
+          </div>
+        </div>
+        <div class="eq-row">
+          <span class="eq-name s">S: P = c + d·Q</span>
+          <div class="param-pair">
+            <div class="param-item"><label>c</label><input type="number" id="sc" value="10" step="5" onchange="fromInputs()"></div>
+            <div class="param-item"><label>d</label><input type="number" id="sd" value="2" step="0.5" min="0.1" onchange="fromInputs()"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <div class="ctrl-label">Shift curves</div>
+        <div class="shift-row">
+          <span class="shift-name d">Demand</span>
+          <button class="shift-btn" onclick="shift('D',-1)">◀</button>
+          <button class="shift-btn" onclick="shift('D',1)">▶</button>
+          <input type="number" class="shift-amt" id="amt-d" value="10" step="5" min="1">
+        </div>
+        <div class="shift-row">
+          <span class="shift-name s">Supply</span>
+          <button class="shift-btn" onclick="shift('S',-1)">◀</button>
+          <button class="shift-btn" onclick="shift('S',1)">▶</button>
+          <input type="number" class="shift-amt" id="amt-s" value="10" step="5" min="1">
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <div class="ctrl-label">Interventions</div>
+        <div class="iv-row"><label>excise tax</label><input type="number" id="tax" value="0" step="5" min="0" onchange="fromInputs()"></div>
+        <div class="iv-row"><label>price floor</label><input type="number" id="floor" value="0" step="5" min="0" onchange="fromInputs()"></div>
+        <div class="iv-row"><label>price ceiling</label><input type="number" id="ceil" value="0" step="5" min="0" onchange="fromInputs()"></div>
+      </div>
+
+      <button class="reset-btn" onclick="reset()">reset diagram</button>
+    </div>
+  </div>
+
+</div>
+
 <script>
+// ============================================================
+// PROJECT ARROW v0.2
+// ============================================================
+
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 let W, H, PAD;
@@ -150,88 +459,81 @@ let S = {
 
 function resize(){
   const r = cv.parentElement.getBoundingClientRect();
-  W = Math.floor(r.width) - 2;
+  W = Math.floor(r.width) - 10;
   cv.width = W; cv.style.width = W+'px';
-  H = 460; cv.height = H;
-  PAD = {l:62,r:22,t:22,b:50};
+  H = 300; cv.height = H;
+  PAD = {l:52, r:18, t:18, b:42};
   draw();
 }
 
 // --- Algebra ---
-function eq(da,db,sc,sd){ const Q=(da-sc)/(db+sd); return {Q, P:da-db*Q}; }
+function eqCalc(da,db,sc,sd){ const Q=(da-sc)/(db+sd); return {Q, P:da-db*Q}; }
 
 function calc(){
   const {da,db,sc,sd,tax,floor,ceil} = S;
-  const base = eq(da,db,sc,sd);
-  const taxEq = tax>0 ? eq(da,db,sc+tax,sd) : null;
+  const base = eqCalc(da,db,sc,sd);
+  const taxEq = tax>0 ? eqCalc(da,db,sc+tax,sd) : null;
   const hasTax = tax>0;
   const hasFloor = floor>0 && floor>base.P;
   const hasCeil = ceil>0 && ceil<base.P;
-
-  let cs,ps,dwl=0,taxRev=0,surShort=null;
-  let Pc=null, Pp=null;
+  let cs,ps,dwl=0,taxRev=0,surShort=null,Pc=null,Pp=null;
 
   if(hasTax){
-    Pc = taxEq.P; Pp = Pc - tax;
-    const Qt = taxEq.Q;
-    cs = 0.5*(da-Pc)*Qt;
-    ps = 0.5*(Pp-sc)*Qt;
-    taxRev = tax*Qt;
-    dwl = 0.5*tax*(base.Q-Qt);
+    Pc=taxEq.P; Pp=Pc-tax;
+    cs=0.5*(da-Pc)*taxEq.Q;
+    ps=0.5*(Pp-sc)*taxEq.Q;
+    taxRev=tax*taxEq.Q;
+    dwl=0.5*tax*(base.Q-taxEq.Q);
   } else if(hasFloor){
     const Qd=(da-floor)/db, Qs=(floor-sc)/sd;
-    cs = 0.5*(da-floor)*Qd;
-    ps = floor*Qd - sc*Qd - 0.5*sd*Qd*Qd;
-    dwl = 0.5*(floor-base.P)*(base.Q-Qd);
-    surShort = {type:'surplus', Qd, Qs};
+    cs=0.5*(da-floor)*Qd;
+    ps=floor*Qd-sc*Qd-0.5*sd*Qd*Qd;
+    dwl=0.5*(floor-base.P)*(base.Q-Qd);
+    surShort={type:'surplus',Qd,Qs};
   } else if(hasCeil){
     const Qd=(da-ceil)/db, Qs=(ceil-sc)/sd;
-    cs = da*Qs - 0.5*db*Qs*Qs - ceil*Qs;
-    ps = 0.5*(ceil-sc)*Qs;
-    dwl = 0.5*(base.P-ceil)*(base.Q-Qs);
-    surShort = {type:'shortage', Qd, Qs};
+    cs=da*Qs-0.5*db*Qs*Qs-ceil*Qs;
+    ps=0.5*(ceil-sc)*Qs;
+    dwl=0.5*(base.P-ceil)*(base.Q-Qs);
+    surShort={type:'shortage',Qd,Qs};
   } else {
-    cs = 0.5*(da-base.P)*base.Q;
-    ps = 0.5*(base.P-sc)*base.Q;
+    cs=0.5*(da-base.P)*base.Q;
+    ps=0.5*(base.P-sc)*base.Q;
   }
-
   return {base,taxEq,hasTax,hasFloor,hasCeil,
-    cs:Math.max(0,cs||0), ps:Math.max(0,ps||0),
-    dwl:Math.max(0,dwl||0), taxRev:Math.max(0,taxRev||0),
-    surShort, Pc, Pp};
+    cs:Math.max(0,cs||0),ps:Math.max(0,ps||0),
+    dwl:Math.max(0,dwl||0),taxRev:Math.max(0,taxRev||0),
+    surShort,Pc,Pp};
 }
 
-// --- Coordinate transforms ---
-function scale(){
-  return { maxP: S.da*1.18, maxQ: (S.da/S.db)*1.18 };
-}
+function scale(){ return {maxP:S.da*1.18, maxQ:(S.da/S.db)*1.18}; }
 function tc(Q,P){ const {maxP,maxQ}=scale(); return {x:PAD.l+(Q/maxQ)*(W-PAD.l-PAD.r), y:PAD.t+(1-P/maxP)*(H-PAD.t-PAD.b)}; }
 function td(cx,cy){ const {maxP,maxQ}=scale(); return {Q:((cx-PAD.l)/(W-PAD.l-PAD.r))*maxQ, P:(1-(cy-PAD.t)/(H-PAD.t-PAD.b))*maxP}; }
 
-// --- Drawing ---
+// --- Draw ---
 function draw(){
   if(!W) return;
   ctx.clearRect(0,0,W,H);
-  const c = calc();
-  const {maxP,maxQ} = scale();
+  const c=calc();
+  const {maxP,maxQ}=scale();
   drawGrid(maxP,maxQ);
   drawAxes(maxP,maxQ);
   if(S.show.cs) shadeCS(c);
   if(S.show.ps) shadePS(c);
-  if(S.show.tax && c.hasTax) shadeTax(c);
-  if(S.show.dwl && c.hasTax) shadeDWL(c);
-  if(S.show.floor && c.hasFloor) drawFloor(c);
-  if(S.show.ceil && c.hasCeil) drawCeil(c);
-  drawCurve(S.sc, S.sd, false, '#b33a1a', "S", c.hasTax);
-  if(c.hasTax) drawCurve(S.sc+S.tax, S.sd, false, '#b33a1a', "S'", false);
-  drawCurve(S.da, S.db, true, '#1a5fa8', "D", false);
+  if(S.show.tax&&c.hasTax) shadeTax(c);
+  if(S.show.dwl&&c.hasTax) shadeDWL(c);
+  if(S.show.floor&&c.hasFloor) drawFloor(c);
+  if(S.show.ceil&&c.hasCeil) drawCeil(c);
+  drawCurve(S.sc,S.sd,false,'#a83218','S',c.hasTax);
+  if(c.hasTax) drawCurve(S.sc+S.tax,S.sd,false,'#a83218',"S'",false);
+  drawCurve(S.da,S.db,true,'#1a4f8a','D',false);
   drawEq(c);
-  updateResults(c);
+  updateSummary(c);
   updateAlgebra(c);
 }
 
 function drawGrid(maxP,maxQ){
-  ctx.strokeStyle='#eeeee8'; ctx.lineWidth=0.5;
+  ctx.strokeStyle='#eceae4'; ctx.lineWidth=0.5;
   for(let i=1;i<=5;i++){
     const {x}=tc(i/5*maxQ,0); ctx.beginPath(); ctx.moveTo(x,PAD.t); ctx.lineTo(x,H-PAD.b); ctx.stroke();
     const {y}=tc(0,i/5*maxP); ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(W-PAD.r,y); ctx.stroke();
@@ -239,246 +541,218 @@ function drawGrid(maxP,maxQ){
 }
 
 function drawAxes(maxP,maxQ){
-  ctx.strokeStyle='#aaa'; ctx.lineWidth=1;
+  ctx.strokeStyle='#c8c5be'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t); ctx.lineTo(PAD.l,H-PAD.b); ctx.lineTo(W-PAD.r,H-PAD.b); ctx.stroke();
-  ctx.fillStyle='#888'; ctx.font='11px Courier New';
+  ctx.fillStyle='#9a9690'; ctx.font='10px DM Mono, monospace';
   for(let i=1;i<=5;i++){
     const Q=Math.round(i/5*maxQ); const {x}=tc(Q,0);
-    ctx.textAlign='center'; ctx.fillText(Q,x,H-PAD.b+15);
+    ctx.textAlign='center'; ctx.fillText(Q,x,H-PAD.b+13);
     const P=Math.round(i/5*maxP); const {y}=tc(0,P);
-    ctx.textAlign='right'; ctx.fillText(P,PAD.l-6,y+4);
+    ctx.textAlign='right'; ctx.fillText(P,PAD.l-5,y+3);
   }
-  ctx.fillStyle='#666'; ctx.font='13px Georgia,serif';
-  ctx.textAlign='center'; ctx.fillText('Q (quantity)',PAD.l+(W-PAD.l-PAD.r)/2,H-8);
-  ctx.save(); ctx.translate(14,PAD.t+(H-PAD.t-PAD.b)/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('P (price)',0,0); ctx.restore();
+  ctx.fillStyle='#9a9690'; ctx.font='11px DM Sans, sans-serif';
+  ctx.textAlign='center'; ctx.fillText('Q',PAD.l+(W-PAD.l-PAD.r)/2,H-4);
+  ctx.save(); ctx.translate(11,PAD.t+(H-PAD.t-PAD.b)/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('P',0,0); ctx.restore();
 }
 
-function drawCurve(intercept, slope, isDemand, color, label, dashed){
+function drawCurve(intercept,slope,isDemand,color,label,dashed){
   const {maxP,maxQ}=scale();
-  ctx.strokeStyle=color; ctx.lineWidth=dashed?1.2:2.2;
-  if(dashed){ctx.setLineDash([5,5]); ctx.globalAlpha=0.5;}
-  ctx.beginPath();
-  let started=false;
+  ctx.strokeStyle=color; ctx.lineWidth=dashed?1.2:2;
+  if(dashed){ctx.setLineDash([5,5]);ctx.globalAlpha=0.35;}
+  ctx.beginPath(); let started=false;
   for(let i=0;i<=300;i++){
     const Q=i/300*maxQ*1.05;
-    const P=isDemand ? intercept-slope*Q : intercept+slope*Q;
+    const P=isDemand?intercept-slope*Q:intercept+slope*Q;
     if(P<0||P>maxP*1.05||Q<0){started=false;continue;}
     const c=tc(Q,P);
-    if(!started){ctx.moveTo(c.x,c.y);started=true;} else ctx.lineTo(c.x,c.y);
+    if(!started){ctx.moveTo(c.x,c.y);started=true;}else ctx.lineTo(c.x,c.y);
   }
   ctx.stroke();
   if(dashed){ctx.setLineDash([]);ctx.globalAlpha=1;}
-  // Label
-  const lQ = isDemand ? (intercept/slope)*0.72 : maxQ*0.72;
-  const lP = isDemand ? intercept-slope*lQ : intercept+slope*lQ;
+  const lQ=isDemand?(intercept/slope)*0.74:maxQ*0.74;
+  const lP=isDemand?intercept-slope*lQ:intercept+slope*lQ;
   if(lP>0&&lP<maxP){
     const lc=tc(lQ,lP);
-    ctx.fillStyle=color; ctx.font='bold 14px Georgia,serif'; ctx.textAlign='left';
-    ctx.fillText(label,lc.x+5,lc.y-5);
+    ctx.fillStyle=color; ctx.font='bold 13px DM Serif Display, serif'; ctx.textAlign='left';
+    ctx.globalAlpha=dashed?0.5:1;
+    ctx.fillText(label,lc.x+4,lc.y-4);
+    ctx.globalAlpha=1;
   }
 }
 
 function drawEq(c){
   const {maxP,maxQ}=scale();
-  // Base equilibrium dot (if no tax)
-  const showBase = !c.hasTax;
-  const pts = showBase ? [c.base] : [c.taxEq];
-  if(c.hasTax) pts.push(c.base); // show original as ghost
-
-  // Original eq ghost when tax active
-  if(c.hasTax && c.base.Q>0 && c.base.P>0){
+  if(c.hasTax&&c.base.Q>0&&c.base.P>0&&c.base.Q<maxQ&&c.base.P<maxP){
     const gc=tc(c.base.Q,c.base.P);
-    ctx.beginPath(); ctx.arc(gc.x,gc.y,4,0,Math.PI*2);
-    ctx.fillStyle='#ccc'; ctx.fill();
-    ctx.fillStyle='#aaa'; ctx.font='italic 11px Georgia,serif'; ctx.textAlign='left';
-    ctx.fillText('E₀',gc.x+7,gc.y-3);
+    ctx.beginPath(); ctx.arc(gc.x,gc.y,3.5,0,Math.PI*2);
+    ctx.fillStyle='#d0cdc6'; ctx.fill();
+    ctx.fillStyle='#b0ada6'; ctx.font='11px DM Sans'; ctx.textAlign='left';
+    ctx.fillText('E₀',gc.x+6,gc.y-3);
   }
-
-  // Main equilibrium
-  const eq2 = c.hasTax ? c.taxEq : c.base;
+  const eq2=c.hasTax?c.taxEq:c.base;
   if(!eq2||eq2.Q<=0||eq2.P<=0||eq2.Q>maxQ||eq2.P>maxP) return;
   const ec=tc(eq2.Q,eq2.P);
-
-  ctx.setLineDash([4,5]); ctx.strokeStyle='#bbb'; ctx.lineWidth=1;
+  ctx.setLineDash([3,4]); ctx.strokeStyle='#c8c5be'; ctx.lineWidth=0.8;
   ctx.beginPath(); ctx.moveTo(ec.x,ec.y); ctx.lineTo(ec.x,H-PAD.b);
   ctx.moveTo(ec.x,ec.y); ctx.lineTo(PAD.l,ec.y); ctx.stroke();
   ctx.setLineDash([]);
-
-  // Pp dashed line if tax
-  if(c.hasTax && c.Pp>0 && c.Pp<maxP){
+  if(c.hasTax&&c.Pp>0&&c.Pp<maxP){
     const ppc=tc(eq2.Q,c.Pp);
-    ctx.setLineDash([4,5]); ctx.strokeStyle='#bbb'; ctx.lineWidth=1;
+    ctx.setLineDash([3,4]); ctx.strokeStyle='#c8c5be'; ctx.lineWidth=0.8;
     ctx.beginPath(); ctx.moveTo(ppc.x,ppc.y); ctx.lineTo(PAD.l,ppc.y); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle='#888'; ctx.font='italic 12px Georgia,serif'; ctx.textAlign='right';
-    ctx.fillText('Pp',PAD.l-6,ppc.y+4);
-    // Tax wedge bracket
-    ctx.strokeStyle='#1a8a3c'; ctx.lineWidth=1.5;
+    ctx.fillStyle='#9a9690'; ctx.font='10px DM Mono'; ctx.textAlign='right';
+    ctx.fillText('Pp',PAD.l-4,ppc.y+3);
+    ctx.strokeStyle='#1a7a3c'; ctx.lineWidth=1.2;
     ctx.beginPath();
-    ctx.moveTo(ec.x+16,ec.y); ctx.lineTo(ec.x+22,ec.y);
-    ctx.lineTo(ec.x+22,ppc.y); ctx.lineTo(ec.x+16,ppc.y); ctx.stroke();
-    ctx.fillStyle='#1a8a3c'; ctx.font='11px Courier New'; ctx.textAlign='left';
-    ctx.fillText('t',ec.x+26,(ec.y+ppc.y)/2+4);
+    ctx.moveTo(ec.x+12,ec.y); ctx.lineTo(ec.x+17,ec.y);
+    ctx.lineTo(ec.x+17,ppc.y); ctx.lineTo(ec.x+12,ppc.y); ctx.stroke();
+    ctx.fillStyle='#1a7a3c'; ctx.font='10px DM Mono'; ctx.textAlign='left';
+    ctx.fillText('t',ec.x+20,(ec.y+ppc.y)/2+4);
   }
-
-  ctx.beginPath(); ctx.arc(ec.x,ec.y,5,0,Math.PI*2);
-  ctx.fillStyle='#2a2a2a'; ctx.fill();
-  ctx.fillStyle='#444'; ctx.font='italic 12px Georgia,serif';
-  ctx.textAlign='center'; ctx.fillText(c.hasTax?'Q*ₜ':'Q*',ec.x,H-PAD.b+15);
-  ctx.textAlign='right'; ctx.fillText(c.hasTax?'Pc':'P*',PAD.l-6,ec.y+4);
+  ctx.beginPath(); ctx.arc(ec.x,ec.y,4.5,0,Math.PI*2);
+  ctx.fillStyle='#1a1814'; ctx.fill();
+  ctx.fillStyle='#5a5650'; ctx.font='10px DM Mono'; ctx.textAlign='center';
+  ctx.fillText(c.hasTax?'Q*ₜ':'Q*',ec.x,H-PAD.b+13);
+  ctx.textAlign='right'; ctx.fillText(c.hasTax?'Pc':'P*',PAD.l-4,ec.y+3);
 }
 
 function shadeCS(c){
   const eq2=c.hasTax?c.taxEq:c.base; if(!eq2||eq2.Q<=0) return;
   const Pc=c.hasTax?c.Pc:eq2.P;
-  ctx.fillStyle='rgba(26,95,168,0.14)';
-  ctx.beginPath(); const top=tc(0,S.da); ctx.moveTo(top.x,top.y);
-  for(let i=0;i<=100;i++){const Q=i/100*eq2.Q; const c2=tc(Q,S.da-S.db*Q); ctx.lineTo(c2.x,c2.y);}
-  const ec=tc(eq2.Q,Pc); const bc=tc(0,Pc);
-  ctx.lineTo(ec.x,ec.y); ctx.lineTo(bc.x,bc.y); ctx.closePath(); ctx.fill();
-  const lc=tc(eq2.Q*0.22,S.da-(S.da-Pc)*0.32);
-  ctx.fillStyle='#1a5fa8'; ctx.font='italic 12px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('CS',lc.x,lc.y);
+  ctx.fillStyle='rgba(26,79,138,0.13)';
+  ctx.beginPath(); ctx.moveTo(tc(0,S.da).x,tc(0,S.da).y);
+  for(let i=0;i<=100;i++){const Q=i/100*eq2.Q; ctx.lineTo(tc(Q,S.da-S.db*Q).x,tc(Q,S.da-S.db*Q).y);}
+  ctx.lineTo(tc(eq2.Q,Pc).x,tc(eq2.Q,Pc).y); ctx.lineTo(tc(0,Pc).x,tc(0,Pc).y); ctx.closePath(); ctx.fill();
+  const lc=tc(eq2.Q*0.2,S.da-(S.da-Pc)*0.3);
+  ctx.fillStyle='#1a4f8a'; ctx.font='italic 11px DM Sans'; ctx.textAlign='center'; ctx.fillText('CS',lc.x,lc.y);
 }
 
 function shadePS(c){
   const eq2=c.hasTax?c.taxEq:c.base; if(!eq2||eq2.Q<=0) return;
   const Pp=c.hasTax?c.Pp:eq2.P;
-  ctx.fillStyle='rgba(179,58,26,0.14)';
-  ctx.beginPath(); const bot=tc(0,S.sc); ctx.moveTo(bot.x,bot.y);
-  for(let i=0;i<=100;i++){const Q=i/100*eq2.Q; const c2=tc(Q,S.sc+S.sd*Q); ctx.lineTo(c2.x,c2.y);}
-  const ec=tc(eq2.Q,Pp); const bc=tc(0,Pp);
-  ctx.lineTo(ec.x,ec.y); ctx.lineTo(bc.x,bc.y); ctx.closePath(); ctx.fill();
-  const lc=tc(eq2.Q*0.22,S.sc+(Pp-S.sc)*0.45);
-  ctx.fillStyle='#b33a1a'; ctx.font='italic 12px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('PS',lc.x,lc.y);
+  ctx.fillStyle='rgba(168,50,24,0.13)';
+  ctx.beginPath(); ctx.moveTo(tc(0,S.sc).x,tc(0,S.sc).y);
+  for(let i=0;i<=100;i++){const Q=i/100*eq2.Q; ctx.lineTo(tc(Q,S.sc+S.sd*Q).x,tc(Q,S.sc+S.sd*Q).y);}
+  ctx.lineTo(tc(eq2.Q,Pp).x,tc(eq2.Q,Pp).y); ctx.lineTo(tc(0,Pp).x,tc(0,Pp).y); ctx.closePath(); ctx.fill();
+  const lc=tc(eq2.Q*0.2,S.sc+(Pp-S.sc)*0.4);
+  ctx.fillStyle='#a83218'; ctx.font='italic 11px DM Sans'; ctx.textAlign='center'; ctx.fillText('PS',lc.x,lc.y);
 }
 
 function shadeTax(c){
   if(!c.hasTax) return;
-  const Qt=c.taxEq.Q;
-  ctx.fillStyle='rgba(30,140,60,0.14)';
+  ctx.fillStyle='rgba(26,122,60,0.13)';
   ctx.beginPath();
-  const tl=tc(0,c.Pc),tr=tc(Qt,c.Pc),br=tc(Qt,c.Pp),bl=tc(0,c.Pp);
+  const tl=tc(0,c.Pc),tr=tc(c.taxEq.Q,c.Pc),br=tc(c.taxEq.Q,c.Pp),bl=tc(0,c.Pp);
   ctx.moveTo(tl.x,tl.y); ctx.lineTo(tr.x,tr.y); ctx.lineTo(br.x,br.y); ctx.lineTo(bl.x,bl.y); ctx.closePath(); ctx.fill();
-  const lc=tc(Qt*0.5,(c.Pc+c.Pp)/2);
-  ctx.fillStyle='#1a8a3c'; ctx.font='italic 11px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('TR',lc.x,lc.y);
+  const lc=tc(c.taxEq.Q*0.5,(c.Pc+c.Pp)/2);
+  ctx.fillStyle='#1a7a3c'; ctx.font='italic 10px DM Sans'; ctx.textAlign='center'; ctx.fillText('TR',lc.x,lc.y);
 }
 
 function shadeDWL(c){
   if(!c.hasTax) return;
-  const Qt=c.taxEq.Q, Qb=c.base.Q;
-  ctx.fillStyle='rgba(100,0,150,0.14)';
-  ctx.beginPath();
-  ctx.moveTo(tc(Qt,c.Pc).x,tc(Qt,c.Pc).y);
-  for(let i=100;i>=0;i--){const Q=Qt+(i/100)*(Qb-Qt); const cc=tc(Q,S.da-S.db*Q); ctx.lineTo(cc.x,cc.y);}
-  for(let i=0;i<=100;i++){const Q=Qt+(i/100)*(Qb-Qt); const cc=tc(Q,S.sc+S.sd*Q); ctx.lineTo(cc.x,cc.y);}
+  const Qt=c.taxEq.Q,Qb=c.base.Q;
+  ctx.fillStyle='rgba(90,20,130,0.14)';
+  ctx.beginPath(); ctx.moveTo(tc(Qt,c.Pc).x,tc(Qt,c.Pc).y);
+  for(let i=100;i>=0;i--){const Q=Qt+(i/100)*(Qb-Qt); ctx.lineTo(tc(Q,S.da-S.db*Q).x,tc(Q,S.da-S.db*Q).y);}
+  for(let i=0;i<=100;i++){const Q=Qt+(i/100)*(Qb-Qt); ctx.lineTo(tc(Q,S.sc+S.sd*Q).x,tc(Q,S.sc+S.sd*Q).y);}
   ctx.lineTo(tc(Qt,c.Pp).x,tc(Qt,c.Pp).y); ctx.closePath(); ctx.fill();
   const lc=tc((Qt+Qb)/2,(c.Pc+c.Pp)/2);
-  ctx.fillStyle='#7a2a9a'; ctx.font='italic 11px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('DWL',lc.x,lc.y);
+  ctx.fillStyle='#6a1a9a'; ctx.font='italic 10px DM Sans'; ctx.textAlign='center'; ctx.fillText('DWL',lc.x,lc.y);
 }
 
 function drawFloor(c){
-  if(!c.hasFloor) return;
-  const {maxQ}=scale(); const fl=S.floor;
-  ctx.strokeStyle='#c8960a'; ctx.lineWidth=2; ctx.setLineDash([8,4]);
-  const l=tc(0,fl),r=tc(maxQ,fl);
+  const {maxQ}=scale();
+  ctx.strokeStyle='#c8920a'; ctx.lineWidth=1.8; ctx.setLineDash([7,4]);
+  const l=tc(0,S.floor),r=tc(maxQ,S.floor);
   ctx.beginPath(); ctx.moveTo(l.x,l.y); ctx.lineTo(r.x,r.y); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle='#8a6200'; ctx.font='12px Courier New'; ctx.textAlign='left';
-  ctx.fillText('floor = '+fl,l.x+4,l.y-6);
+  ctx.fillStyle='#7a5800'; ctx.font='10px DM Mono'; ctx.textAlign='left';
+  ctx.fillText('floor='+S.floor,l.x+4,l.y-5);
   if(c.surShort&&c.surShort.type==='surplus'){
     const {Qd,Qs}=c.surShort;
-    const qdc=tc(Qd,fl),qsc=tc(Qs,fl);
-    ctx.strokeStyle='#c8960a'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(qdc.x,qdc.y+10); ctx.lineTo(qsc.x,qsc.y+10); ctx.stroke();
-    ctx.font='11px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#8a6200';
-    ctx.fillText('surplus ΔQ='+(Math.round((Qs-Qd)*10)/10),(qdc.x+qsc.x)/2,qdc.y+24);
+    const qdc=tc(Qd,S.floor),qsc=tc(Qs,S.floor);
+    ctx.strokeStyle='#c8920a'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(qdc.x,qdc.y+8); ctx.lineTo(qsc.x,qsc.y+8); ctx.stroke();
+    ctx.fillStyle='#7a5800'; ctx.font='10px DM Mono'; ctx.textAlign='center';
+    ctx.fillText('surplus',(qdc.x+qsc.x)/2,qdc.y+20);
   }
 }
 
 function drawCeil(c){
-  if(!c.hasCeil) return;
-  const {maxQ}=scale(); const cl=S.ceil;
-  ctx.strokeStyle='#c83030'; ctx.lineWidth=2; ctx.setLineDash([8,4]);
-  const l=tc(0,cl),r=tc(maxQ,cl);
+  const {maxQ}=scale();
+  ctx.strokeStyle='#c83030'; ctx.lineWidth=1.8; ctx.setLineDash([7,4]);
+  const l=tc(0,S.ceil),r=tc(maxQ,S.ceil);
   ctx.beginPath(); ctx.moveTo(l.x,l.y); ctx.lineTo(r.x,r.y); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle='#8a1a1a'; ctx.font='12px Courier New'; ctx.textAlign='left';
-  ctx.fillText('ceiling = '+cl,l.x+4,cl===0?l.y-6:l.y+16);
+  ctx.fillStyle='#8a1a1a'; ctx.font='10px DM Mono'; ctx.textAlign='left';
+  ctx.fillText('ceiling='+S.ceil,l.x+4,l.y+13);
   if(c.surShort&&c.surShort.type==='shortage'){
     const {Qd,Qs}=c.surShort;
-    const qdc=tc(Qd,cl),qsc=tc(Qs,cl);
-    ctx.strokeStyle='#c83030'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(qsc.x,qsc.y+10); ctx.lineTo(qdc.x,qdc.y+10); ctx.stroke();
-    ctx.font='11px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#8a1a1a';
-    ctx.fillText('shortage ΔQ='+(Math.round((Qd-Qs)*10)/10),(qsc.x+qdc.x)/2,qsc.y+24);
+    const qsc=tc(Qs,S.ceil),qdc=tc(Qd,S.ceil);
+    ctx.strokeStyle='#c83030'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(qsc.x,qsc.y+8); ctx.lineTo(qdc.x,qdc.y+8); ctx.stroke();
+    ctx.fillStyle='#8a1a1a'; ctx.font='10px DM Mono'; ctx.textAlign='center';
+    ctx.fillText('shortage',(qsc.x+qdc.x)/2,qsc.y+20);
   }
 }
 
-// --- Results ---
+// --- Summary bar ---
 function f(n){return Math.round(n*10)/10;}
 function fm(n){return n>9999?(n/1000).toFixed(1)+'k':Math.round(n);}
 
-function updateResults(c){
+function updateSummary(c){
   const eq2=c.hasTax?c.taxEq:c.base;
-  let h='';
-  h+=`<tr><td>Q*</td><td>${f(eq2.Q)}</td></tr>`;
-  h+=`<tr><td>P*</td><td>${f(eq2.P)}</td></tr>`;
-  if(c.hasTax){
-    h+=`<tr><td>Pc</td><td>${f(c.Pc)}</td></tr>`;
-    h+=`<tr><td>Pp</td><td>${f(c.Pp)}</td></tr>`;
-  }
-  h+=`<tr><td class="rcs">CS</td><td class="rcs">${fm(c.cs)}</td></tr>`;
-  h+=`<tr><td class="rps">PS</td><td class="rps">${fm(c.ps)}</td></tr>`;
-  if(c.hasTax){
-    h+=`<tr><td class="rtax">Tax revenue</td><td class="rtax">${fm(c.taxRev)}</td></tr>`;
-    h+=`<tr><td class="rdwl">DWL</td><td class="rdwl">${fm(c.dwl)}</td></tr>`;
-    h+=`<tr><td>Total surplus</td><td>${fm(c.cs+c.ps+c.taxRev)}</td></tr>`;
-  } else {
-    if(c.dwl>0) h+=`<tr><td class="rdwl">DWL</td><td class="rdwl">${fm(c.dwl)}</td></tr>`;
-    h+=`<tr><td>Total surplus</td><td>${fm(c.cs+c.ps)}</td></tr>`;
-  }
-  if(c.surShort){
-    const ss=c.surShort;
-    const amt=ss.type==='surplus'?f(ss.Qs-ss.Qd):f(ss.Qd-ss.Qs);
-    h+=`<tr><td>${ss.type}</td><td>${amt} units</td></tr>`;
-  }
-  document.getElementById('rt').innerHTML=h;
+  document.getElementById('es-q').textContent = f(eq2.Q);
+  document.getElementById('es-p').textContent = f(c.hasTax?c.Pc:eq2.P);
+  document.getElementById('es-cs').textContent = fm(c.cs);
+  document.getElementById('es-ps').textContent = fm(c.ps);
+  const ts = c.hasTax ? c.cs+c.ps+c.taxRev : c.cs+c.ps;
+  document.getElementById('es-ts').textContent = fm(ts);
 }
 
+// --- Algebra ---
 function updateAlgebra(c){
   const {da,db,sc,sd,tax,floor,ceil}=S;
-  const b=c.base;
-  let L=[];
-  L.push(`<span class="cm">// Demand:  P = ${da} − ${db}·Q`);
-  L.push(`// Supply:  P = ${sc} + ${sd}·Q</span>`);
-  L.push('');
-  L.push(`<span class="cm">// Equilibrium: set D = S</span>`);
+  const b=c.base; let L=[];
+  L.push(`<span class="cm">// Demand:  P = ${da} − ${db}·Q</span>`);
+  L.push(`<span class="cm">// Supply:  P = ${sc} + ${sd}·Q</span>`);
+  L.push(`<hr class="sep">`);
+  L.push(`<span class="cm">// Set equal → equilibrium</span>`);
   L.push(`${da} − ${db}Q  =  ${sc} + ${sd}Q`);
   L.push(`${da-sc}  =  ${db+sd}Q`);
-  L.push(`<b>Q* = ${f(b.Q)},  P* = ${f(b.P)}</b>`);
+  L.push(`<span class="hi">Q* = ${f(b.Q)},  P* = ${f(b.P)}</span>`);
   if(c.hasTax){
-    L.push('');
-    L.push(`<span class="cm">// Excise tax t = ${tax}: supply shifts to P = ${sc+tax} + ${sd}·Q</span>`);
+    L.push(`<hr class="sep">`);
+    L.push(`<span class="cm">// Excise tax t = ${tax}</span>`);
+    L.push(`<span class="cm">// New supply: P = ${sc+tax} + ${sd}·Q</span>`);
     L.push(`${da} − ${db}Q  =  ${sc+tax} + ${sd}Q`);
-    L.push(`${da-(sc+tax)}  =  ${db+sd}Q`);
-    L.push(`<b>Q*ₜ = ${f(c.taxEq.Q)},  Pc = ${f(c.Pc)},  Pp = ${f(c.Pp)}</b>`);
-    L.push(`Tax rev = ${tax} × ${f(c.taxEq.Q)} = <b>${fm(c.taxRev)}</b>`);
-    L.push(`DWL = ½ × ${tax} × (${f(b.Q)} − ${f(c.taxEq.Q)}) = <b>${fm(c.dwl)}</b>`);
+    L.push(`<span class="hi">Q*ₜ = ${f(c.taxEq.Q)},  Pc = ${f(c.Pc)},  Pp = ${f(c.Pp)}</span>`);
+    L.push(`Tax rev = ${tax} × ${f(c.taxEq.Q)} = <span class="hi">${fm(c.taxRev)}</span>`);
+    L.push(`DWL = ½ × ${tax} × (${f(b.Q)} − ${f(c.taxEq.Q)}) = <span class="hi">${fm(c.dwl)}</span>`);
   }
   if(c.hasFloor){
-    L.push('');
-    L.push(`<span class="cm">// Price floor = ${floor} > P* = ${f(b.P)}</span>`);
-    L.push(`Qd: ${da} − ${db}·Qd = ${floor}  →  Qd = ${f((da-floor)/db)}`);
-    L.push(`Qs: ${sc} + ${sd}·Qs = ${floor}  →  Qs = ${f((floor-sc)/sd)}`);
-    L.push(`<b>Surplus = ${f((floor-sc)/sd - (da-floor)/db)} units</b>`);
+    L.push(`<hr class="sep">`);
+    L.push(`<span class="cm">// Floor = ${floor} (above P* = ${f(b.P)})</span>`);
+    L.push(`Qd = (${da} − ${floor}) / ${db} = <span class="hi">${f((da-floor)/db)}</span>`);
+    L.push(`Qs = (${floor} − ${sc}) / ${sd} = <span class="hi">${f((floor-sc)/sd)}</span>`);
+    L.push(`<span class="hi">Surplus = ${f((floor-sc)/sd-(da-floor)/db)} units</span>`);
   }
   if(c.hasCeil){
-    L.push('');
-    L.push(`<span class="cm">// Price ceiling = ${ceil} < P* = ${f(b.P)}</span>`);
-    L.push(`Qd: ${da} − ${db}·Qd = ${ceil}  →  Qd = ${f((da-ceil)/db)}`);
-    L.push(`Qs: ${sc} + ${sd}·Qs = ${ceil}  →  Qs = ${f((ceil-sc)/sd)}`);
-    L.push(`<b>Shortage = ${f((da-ceil)/db - (ceil-sc)/sd)} units</b>`);
+    L.push(`<hr class="sep">`);
+    L.push(`<span class="cm">// Ceiling = ${ceil} (below P* = ${f(b.P)})</span>`);
+    L.push(`Qd = (${da} − ${ceil}) / ${db} = <span class="hi">${f((da-ceil)/db)}</span>`);
+    L.push(`Qs = (${ceil} − ${sc}) / ${sd} = <span class="hi">${f((ceil-sc)/sd)}</span>`);
+    L.push(`<span class="hi">Shortage = ${f((da-ceil)/db-(ceil-sc)/sd)} units</span>`);
   }
-  document.getElementById('alg').innerHTML = L.join('<br>');
+  document.getElementById('alg').innerHTML=L.join('<br>');
+}
+
+// --- Tabs ---
+function showTab(id, btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
 }
 
 // --- Controls ---
@@ -496,11 +770,11 @@ function fromInputs(){
 function shift(curve,dir){
   if(curve==='D'){
     const a=parseFloat(document.getElementById('amt-d').value)||10;
-    S.da=Math.max(S.sc+5, S.da+dir*a);
+    S.da=Math.max(S.sc+5,S.da+dir*a);
     document.getElementById('da').value=Math.round(S.da);
   } else {
     const a=parseFloat(document.getElementById('amt-s').value)||10;
-    S.sc=Math.max(0,Math.min(S.da-5, S.sc+dir*a));
+    S.sc=Math.max(0,Math.min(S.da-5,S.sc+dir*a));
     document.getElementById('sc').value=Math.round(S.sc);
   }
   draw();
@@ -509,7 +783,7 @@ function shift(curve,dir){
 function tog(k){
   S.show[k]=!S.show[k];
   const b=document.getElementById('b-'+k);
-  b.className='ob'+(S.show[k]?' a-'+k:'');
+  b.className='ov-btn'+(S.show[k]?' a-'+k:'');
   draw();
 }
 
@@ -525,24 +799,24 @@ function syncInputs(){
 
 function reset(){
   S={...S,da:100,db:2,sc:10,sd:2,tax:0,floor:0,ceil:0,
-     show:{cs:false,ps:false,dwl:false,tax:false,floor:false,ceil:false}};
-  ['cs','ps','dwl','tax','floor','ceil'].forEach(k=>document.getElementById('b-'+k).className='ob');
+    show:{cs:false,ps:false,dwl:false,tax:false,floor:false,ceil:false}};
+  ['cs','ps','dwl','tax','floor','ceil'].forEach(k=>document.getElementById('b-'+k).className='ov-btn');
   document.getElementById('sc-sel').value='';
   document.getElementById('sc-text').textContent='';
   syncInputs(); draw();
 }
 
 // --- Scenarios ---
-const SCEN = {
-  hormuz:{text:"Iran closes the Strait of Hormuz, blocking ~20% of global oil shipments. Demand for Canadian oil rises as buyers seek alternatives. Shift the demand curve right to show the effect on Canadian oil prices and quantity traded.",
+const SCEN={
+  hormuz:{text:"Iran closes the Strait of Hormuz, cutting ~20% of global oil supply. Demand for Canadian oil rises as buyers seek alternatives. Shift the demand curve right and find the new equilibrium.",
     da:120,db:2,sc:20,sd:1.5,tax:0,floor:0,ceil:0},
-  vancouver:{text:"The BC government imposes a rent ceiling of $2,000/month in Vancouver, below the market equilibrium of $2,800. Set the ceiling and show the resulting housing shortage. Who gains and who loses?",
+  vancouver:{text:"BC imposes a rent ceiling of $2,000/month in Vancouver, below the market equilibrium of $2,800. Set the ceiling and show the resulting housing shortage.",
     da:5000,db:50,sc:500,sd:50,tax:0,floor:0,ceil:2000},
-  minwage:{text:"BC raises the minimum wage to $18/hr, above the market-clearing wage of $14 for low-skill labour. Set the price floor. Calculate the resulting labour surplus (unemployment) and the welfare effects.",
+  minwage:{text:"BC raises the minimum wage to $18/hr, above the market-clearing wage. Set the price floor and calculate the resulting surplus of labour.",
     da:30,db:0.5,sc:8,sd:0.5,tax:0,floor:18,ceil:0},
-  gastax:{text:"The federal government introduces a $10/unit excise tax on gasoline. Find the new consumer price, producer price, tax revenue, and deadweight loss. How is the tax burden shared between buyers and sellers?",
+  gastax:{text:"The federal government introduces a $10/unit excise tax on gasoline. Find the new consumer price, producer price, tax revenue, and deadweight loss.",
     da:100,db:2,sc:10,sd:2,tax:10,floor:0,ceil:0},
-  carbon:{text:"Canada's carbon pricing adds $20/unit to oil production costs, modelled as an upward shift in the supply curve. Calculate the change in consumer surplus, producer surplus, government revenue, and deadweight loss.",
+  carbon:{text:"Canada's carbon pricing adds $20/unit to oil production costs. Calculate the change in consumer surplus, producer surplus, government revenue, and deadweight loss.",
     da:100,db:1.5,sc:15,sd:1.5,tax:20,floor:0,ceil:0},
 };
 
@@ -550,14 +824,13 @@ function loadScenario(){
   const k=document.getElementById('sc-sel').value;
   if(!k){reset();return;}
   const sc=SCEN[k]; if(!sc) return;
-  S.da=sc.da; S.db=sc.db; S.sc=sc.sc; S.sd=sc.sd;
-  S.tax=sc.tax; S.floor=sc.floor; S.ceil=sc.ceil;
+  S.da=sc.da;S.db=sc.db;S.sc=sc.sc;S.sd=sc.sd;
+  S.tax=sc.tax;S.floor=sc.floor;S.ceil=sc.ceil;
   S.show={cs:false,ps:false,dwl:false,tax:false,floor:false,ceil:false};
-  ['cs','ps','dwl','tax','floor','ceil'].forEach(k2=>document.getElementById('b-'+k2).className='ob');
-  // Auto-show relevant overlays
-  if(sc.tax>0){['cs','ps','tax','dwl'].forEach(k2=>{S.show[k2]=true;document.getElementById('b-'+k2).className='ob a-'+k2;});}
-  if(sc.floor>0){S.show.floor=true;document.getElementById('b-floor').className='ob a-floor';}
-  if(sc.ceil>0){S.show.ceil=true;document.getElementById('b-ceil').className='ob a-ceil';}
+  ['cs','ps','dwl','tax','floor','ceil'].forEach(k2=>document.getElementById('b-'+k2).className='ov-btn');
+  if(sc.tax>0){['cs','ps','tax','dwl'].forEach(k2=>{S.show[k2]=true;document.getElementById('b-'+k2).className='ov-btn a-'+k2;});}
+  if(sc.floor>0){S.show.floor=true;document.getElementById('b-floor').className='ov-btn a-floor';}
+  if(sc.ceil>0){S.show.ceil=true;document.getElementById('b-ceil').className='ov-btn a-ceil';}
   syncInputs();
   document.getElementById('sc-text').textContent=sc.text;
   draw();
@@ -566,28 +839,23 @@ function loadScenario(){
 // --- Drag ---
 function evPos(e){
   const r=cv.getBoundingClientRect();
-  const sx=cv.width/r.width, sy=cv.height/r.height;
+  const sx=cv.width/r.width,sy=cv.height/r.height;
   const cx=e.touches?e.touches[0].clientX:e.clientX;
   const cy=e.touches?e.touches[0].clientY:e.clientY;
-  return {x:(cx-r.left)*sx, y:(cy-r.top)*sy};
+  return {x:(cx-r.left)*sx,y:(cy-r.top)*sy};
 }
+function hitD(Q,P){const {maxP}=scale();return Math.abs(P-(S.da-S.db*Q))<maxP*0.06;}
+function hitS(Q,P){const {maxP}=scale();return Math.abs(P-((S.sc+S.tax)+S.sd*Q))<maxP*0.06;}
 
-function hitD(Q,P){const {maxP}=scale(); return Math.abs(P-(S.da-S.db*Q))<maxP*0.05;}
-function hitS(Q,P){const {maxP}=scale(); return Math.abs(P-((S.sc+(S.tax||0))+S.sd*Q))<maxP*0.05;}
-
-cv.addEventListener('mousedown',e=>{
-  const p=evPos(e); const d=td(p.x,p.y);
-  if(hitD(d.Q,d.P)){S.drag='D';S.anchor=d;}
-  else if(hitS(d.Q,d.P)){S.drag='S';S.anchor=d;}
-});
+cv.addEventListener('mousedown',e=>{const p=evPos(e);const d=td(p.x,p.y);if(hitD(d.Q,d.P)){S.drag='D';S.anchor=d;}else if(hitS(d.Q,d.P)){S.drag='S';S.anchor=d;}});
 cv.addEventListener('mousemove',e=>{
-  const p=evPos(e); const d=td(p.x,p.y);
+  const p=evPos(e);const d=td(p.x,p.y);
   if(!S.drag){cv.style.cursor=(hitD(d.Q,d.P)||hitS(d.Q,d.P))?'grab':'crosshair';return;}
   cv.style.cursor='grabbing';
   const dP=d.P-S.anchor.P;
   if(S.drag==='D'){S.da=Math.max(S.sc+5,S.da+dP);document.getElementById('da').value=Math.round(S.da);}
   else{S.sc=Math.max(0,Math.min(S.da-5,S.sc+dP));document.getElementById('sc').value=Math.round(S.sc);}
-  S.anchor=d; draw();
+  S.anchor=d;draw();
 });
 cv.addEventListener('mouseup',()=>{S.drag=null;});
 cv.addEventListener('mouseleave',()=>{S.drag=null;});
