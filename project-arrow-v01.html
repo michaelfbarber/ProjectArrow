@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Arrow — Supply & Demand</title>
+<style>
+  :root {
+    --d-color: #1a5fa8;
+    --d-light: #e8f1fb;
+    --s-color: #b33a1a;
+    --s-light: #fbeee9;
+    --bg: #fafaf7;
+    --panel: #fff;
+    --text: #1a1a1a;
+    --muted: #666;
+    --border: #ddd;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, serif; background: var(--bg); color: var(--text); }
+  header { padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; align-items: baseline; gap: 16px; }
+  header h1 { font-size: 16px; font-weight: normal; letter-spacing: 0.05em; }
+  header span { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; }
+  .layout { display: grid; grid-template-columns: 1fr 290px; min-height: calc(100vh - 47px); }
+  .diagram-area { padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px; }
+  canvas { display: block; width: 100%; background: var(--panel); border: 1px solid var(--border); cursor: crosshair; touch-action: none; }
+  .drag-hint { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; text-align: center; }
+  .algebra-block { background: var(--panel); border: 1px solid var(--border); padding: 10px 14px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.9; color: var(--text); }
+  .algebra-block .cm { color: var(--muted); }
+  .sidebar { border-left: 1px solid var(--border); background: var(--panel); overflow-y: auto; }
+  .ss { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .ss h3 { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-weight: normal; font-family: 'Courier New', monospace; }
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .param-item label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 2px; font-family: 'Courier New', monospace; }
+  .param-item input { width: 100%; padding: 4px 7px; font-size: 12px; font-family: 'Courier New', monospace; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  .eq-label { font-size: 12px; font-style: italic; margin-bottom: 5px; }
+  .eq-label.d { color: var(--d-color); }
+  .eq-label.s { color: var(--s-color); }
+  .shift-row { display: flex; gap: 5px; align-items: center; margin-bottom: 6px; }
+  .shift-row span { font-size: 12px; font-style: italic; min-width: 46px; }
+  .shift-row span.d { color: var(--d-color); }
+  .shift-row span.s { color: var(--s-color); }
+  .sb { flex: 1; padding: 4px 0; font-size: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-family: Georgia, serif; }
+  .sb:hover { background: #f0f0ec; }
+  .sa { width: 44px; padding: 4px 5px; font-size: 11px; font-family: 'Courier New', monospace; border: 1px solid var(--border); background: var(--bg); color: var(--text); text-align: center; }
+  .iv-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+  .iv-row label { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; min-width: 72px; }
+  .iv-row input { flex: 1; padding: 4px 7px; font-size: 12px; font-family: 'Courier New', monospace; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .ob { padding: 6px 4px; font-size: 11px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; text-align: center; font-family: 'Courier New', monospace; }
+  .ob:hover { color: var(--text); border-color: #aaa; }
+  .ob.a-cs { background: #e8f1fb; border-color: var(--d-color); color: var(--d-color); }
+  .ob.a-ps { background: #fbeee9; border-color: var(--s-color); color: var(--s-color); }
+  .ob.a-dwl { background: rgba(100,0,150,0.08); border-color: #7a2a9a; color: #7a2a9a; }
+  .ob.a-tax { background: rgba(30,140,60,0.1); border-color: #1a8a3c; color: #1a8a3c; }
+  .ob.a-floor { background: #fff8e0; border-color: #c8960a; color: #8a6200; }
+  .ob.a-ceil { background: #fff0f0; border-color: #c83030; color: #8a1a1a; }
+  .rt { width: 100%; font-size: 12px; border-collapse: collapse; }
+  .rt td { padding: 3px 0; border-bottom: 1px solid #f0f0ea; }
+  .rt tr:last-child td { border: none; }
+  .rt td:first-child { color: var(--muted); font-family: 'Courier New', monospace; font-size: 11px; }
+  .rt td:last-child { text-align: right; font-family: 'Courier New', monospace; font-weight: bold; }
+  .rcs { color: var(--d-color); }
+  .rps { color: var(--s-color); }
+  .rdwl { color: #7a2a9a; }
+  .rtax { color: #1a8a3c; }
+  .reset-btn { width: 100%; padding: 7px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; font-family: 'Courier New', monospace; }
+  .reset-btn:hover { background: #f0f0ec; color: var(--text); }
+  .sc-sel { width: 100%; padding: 5px 7px; font-size: 12px; font-family: Georgia, serif; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 8px; cursor: pointer; }
+  .sc-text { font-size: 12px; line-height: 1.6; font-style: italic; color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Project Arrow</h1>
+  <span>supply &amp; demand — v0.1</span>
+</header>
+<div class="layout">
+  <div class="diagram-area">
+    <canvas id="cv" height="460"></canvas>
+    <div class="drag-hint">drag either curve · or use shift buttons</div>
+    <div class="algebra-block" id="alg"></div>
+  </div>
+  <div class="sidebar">
+    <div class="ss">
+      <h3>Scenario</h3>
+      <select class="sc-sel" id="sc-sel" onchange="loadScenario()">
+        <option value="">— blank —</option>
+        <option value="hormuz">Oil: Strait of Hormuz closure</option>
+        <option value="vancouver">Housing: Vancouver rent ceiling</option>
+        <option value="minwage">Labour: BC minimum wage</option>
+        <option value="gastax">Excise tax: gasoline</option>
+        <option value="carbon">Carbon tax: Canadian oil</option>
+      </select>
+      <div class="sc-text" id="sc-text"></div>
+    </div>
+    <div class="ss">
+      <h3>Equations</h3>
+      <div class="eq-label d">D: P = a − b·Q</div>
+      <div class="param-grid" style="margin-bottom:10px">
+        <div class="param-item"><label>a (intercept)</label><input type="number" id="da" value="100" step="5" onchange="fromInputs()"></div>
+        <div class="param-item"><label>b (slope)</label><input type="number" id="db" value="2" step="0.5" min="0.1" onchange="fromInputs()"></div>
+      </div>
+      <div class="eq-label s">S: P = c + d·Q</div>
+      <div class="param-grid">
+        <div class="param-item"><label>c (intercept)</label><input type="number" id="sc" value="10" step="5" onchange="fromInputs()"></div>
+        <div class="param-item"><label>d (slope)</label><input type="number" id="sd" value="2" step="0.5" min="0.1" onchange="fromInputs()"></div>
+      </div>
+    </div>
+    <div class="ss">
+      <h3>Shift curves</h3>
+      <div class="shift-row"><span class="d">Demand</span><button class="sb" onclick="shift('D',-1)">◀</button><button class="sb" onclick="shift('D',1)">▶</button><input type="number" class="sa" id="amt-d" value="10" step="5" min="1"></div>
+      <div class="shift-row"><span class="s">Supply</span><button class="sb" onclick="shift('S',-1)">◀</button><button class="sb" onclick="shift('S',1)">▶</button><input type="number" class="sa" id="amt-s" value="10" step="5" min="1"></div>
+    </div>
+    <div class="ss">
+      <h3>Interventions</h3>
+      <div class="iv-row"><label>excise tax</label><input type="number" id="tax" value="0" step="5" min="0" onchange="fromInputs()"></div>
+      <div class="iv-row"><label>price floor</label><input type="number" id="floor" value="0" step="5" min="0" onchange="fromInputs()"></div>
+      <div class="iv-row"><label>price ceiling</label><input type="number" id="ceil" value="0" step="5" min="0" onchange="fromInputs()"></div>
+    </div>
+    <div class="ss">
+      <h3>Show / hide</h3>
+      <div class="ov-grid">
+        <button class="ob" id="b-cs" onclick="tog('cs')">CS</button>
+        <button class="ob" id="b-ps" onclick="tog('ps')">PS</button>
+        <button class="ob" id="b-dwl" onclick="tog('dwl')">DWL</button>
+        <button class="ob" id="b-tax" onclick="tog('tax')">tax rev</button>
+        <button class="ob" id="b-floor" onclick="tog('floor')">floor</button>
+        <button class="ob" id="b-ceil" onclick="tog('ceil')">ceiling</button>
+      </div>
+    </div>
+    <div class="ss">
+      <h3>Calculations</h3>
+      <table class="rt" id="rt"></table>
+    </div>
+    <div class="ss"><button class="reset-btn" onclick="reset()">reset</button></div>
+  </div>
+</div>
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H, PAD;
+
+let S = {
+  da:100, db:2, sc:10, sd:2,
+  tax:0, floor:0, ceil:0,
+  show:{cs:false,ps:false,dwl:false,tax:false,floor:false,ceil:false},
+  drag:null, anchor:null
+};
+
+function resize(){
+  const r = cv.parentElement.getBoundingClientRect();
+  W = Math.floor(r.width) - 2;
+  cv.width = W; cv.style.width = W+'px';
+  H = 460; cv.height = H;
+  PAD = {l:62,r:22,t:22,b:50};
+  draw();
+}
+
+// --- Algebra ---
+function eq(da,db,sc,sd){ const Q=(da-sc)/(db+sd); return {Q, P:da-db*Q}; }
+
+function calc(){
+  const {da,db,sc,sd,tax,floor,ceil} = S;
+  const base = eq(da,db,sc,sd);
+  const taxEq = tax>0 ? eq(da,db,sc+tax,sd) : null;
+  const hasTax = tax>0;
+  const hasFloor = floor>0 && floor>base.P;
+  const hasCeil = ceil>0 && ceil<base.P;
+
+  let cs,ps,dwl=0,taxRev=0,surShort=null;
+  let Pc=null, Pp=null;
+
+  if(hasTax){
+    Pc = taxEq.P; Pp = Pc - tax;
+    const Qt = taxEq.Q;
+    cs = 0.5*(da-Pc)*Qt;
+    ps = 0.5*(Pp-sc)*Qt;
+    taxRev = tax*Qt;
+    dwl = 0.5*tax*(base.Q-Qt);
+  } else if(hasFloor){
+    const Qd=(da-floor)/db, Qs=(floor-sc)/sd;
+    cs = 0.5*(da-floor)*Qd;
+    ps = floor*Qd - sc*Qd - 0.5*sd*Qd*Qd;
+    dwl = 0.5*(floor-base.P)*(base.Q-Qd);
+    surShort = {type:'surplus', Qd, Qs};
+  } else if(hasCeil){
+    const Qd=(da-ceil)/db, Qs=(ceil-sc)/sd;
+    cs = da*Qs - 0.5*db*Qs*Qs - ceil*Qs;
+    ps = 0.5*(ceil-sc)*Qs;
+    dwl = 0.5*(base.P-ceil)*(base.Q-Qs);
+    surShort = {type:'shortage', Qd, Qs};
+  } else {
+    cs = 0.5*(da-base.P)*base.Q;
+    ps = 0.5*(base.P-sc)*base.Q;
+  }
+
+  return {base,taxEq,hasTax,hasFloor,hasCeil,
+    cs:Math.max(0,cs||0), ps:Math.max(0,ps||0),
+    dwl:Math.max(0,dwl||0), taxRev:Math.max(0,taxRev||0),
+    surShort, Pc, Pp};
+}
+
+// --- Coordinate transforms ---
+function scale(){
+  return { maxP: S.da*1.18, maxQ: (S.da/S.db)*1.18 };
+}
+function tc(Q,P){ const {maxP,maxQ}=scale(); return {x:PAD.l+(Q/maxQ)*(W-PAD.l-PAD.r), y:PAD.t+(1-P/maxP)*(H-PAD.t-PAD.b)}; }
+function td(cx,cy){ const {maxP,maxQ}=scale(); return {Q:((cx-PAD.l)/(W-PAD.l-PAD.r))*maxQ, P:(1-(cy-PAD.t)/(H-PAD.t-PAD.b))*maxP}; }
+
+// --- Drawing ---
+function draw(){
+  if(!W) return;
+  ctx.clearRect(0,0,W,H);
+  const c = calc();
+  const {maxP,maxQ} = scale();
+  drawGrid(maxP,maxQ);
+  drawAxes(maxP,maxQ);
+  if(S.show.cs) shadeCS(c);
+  if(S.show.ps) shadePS(c);
+  if(S.show.tax && c.hasTax) shadeTax(c);
+  if(S.show.dwl && c.hasTax) shadeDWL(c);
+  if(S.show.floor && c.hasFloor) drawFloor(c);
+  if(S.show.ceil && c.hasCeil) drawCeil(c);
+  drawCurve(S.sc, S.sd, false, '#b33a1a', "S", c.hasTax);
+  if(c.hasTax) drawCurve(S.sc+S.tax, S.sd, false, '#b33a1a', "S'", false);
+  drawCurve(S.da, S.db, true, '#1a5fa8', "D", false);
+  drawEq(c);
+  updateResults(c);
+  updateAlgebra(c);
+}
+
+function drawGrid(maxP,maxQ){
+  ctx.strokeStyle='#eeeee8'; ctx.lineWidth=0.5;
+  for(let i=1;i<=5;i++){
+    const {x}=tc(i/5*maxQ,0); ctx.beginPath(); ctx.moveTo(x,PAD.t); ctx.lineTo(x,H-PAD.b); ctx.stroke();
+    const {y}=tc(0,i/5*maxP); ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(W-PAD.r,y); ctx.stroke();
+  }
+}
+
+function drawAxes(maxP,maxQ){
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t); ctx.lineTo(PAD.l,H-PAD.b); ctx.lineTo(W-PAD.r,H-PAD.b); ctx.stroke();
+  ctx.fillStyle='#888'; ctx.font='11px Courier New';
+  for(let i=1;i<=5;i++){
+    const Q=Math.round(i/5*maxQ); const {x}=tc(Q,0);
+    ctx.textAlign='center'; ctx.fillText(Q,x,H-PAD.b+15);
+    const P=Math.round(i/5*maxP); const {y}=tc(0,P);
+    ctx.textAlign='right'; ctx.fillText(P,PAD.l-6,y+4);
+  }
+  ctx.fillStyle='#666'; ctx.font='13px Georgia,serif';
+  ctx.textAlign='center'; ctx.fillText('Q (quantity)',PAD.l+(W-PAD.l-PAD.r)/2,H-8);
+  ctx.save(); ctx.translate(14,PAD.t+(H-PAD.t-PAD.b)/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('P (price)',0,0); ctx.restore();
+}
+
+function drawCurve(intercept, slope, isDemand, color, label, dashed){
+  const {maxP,maxQ}=scale();
+  ctx.strokeStyle=color; ctx.lineWidth=dashed?1.2:2.2;
+  if(dashed){ctx.setLineDash([5,5]); ctx.globalAlpha=0.5;}
+  ctx.beginPath();
+  let started=false;
+  for(let i=0;i<=300;i++){
+    const Q=i/300*maxQ*1.05;
+    const P=isDemand ? intercept-slope*Q : intercept+slope*Q;
+    if(P<0||P>maxP*1.05||Q<0){started=false;continue;}
+    const c=tc(Q,P);
+    if(!started){ctx.moveTo(c.x,c.y);started=true;} else ctx.lineTo(c.x,c.y);
+  }
+  ctx.stroke();
+  if(dashed){ctx.setLineDash([]);ctx.globalAlpha=1;}
+  // Label
+  const lQ = isDemand ? (intercept/slope)*0.72 : maxQ*0.72;
+  const lP = isDemand ? intercept-slope*lQ : intercept+slope*lQ;
+  if(lP>0&&lP<maxP){
+    const lc=tc(lQ,lP);
+    ctx.fillStyle=color; ctx.font='bold 14px Georgia,serif'; ctx.textAlign='left';
+    ctx.fillText(label,lc.x+5,lc.y-5);
+  }
+}
+
+function drawEq(c){
+  const {maxP,maxQ}=scale();
+  // Base equilibrium dot (if no tax)
+  const showBase = !c.hasTax;
+  const pts = showBase ? [c.base] : [c.taxEq];
+  if(c.hasTax) pts.push(c.base); // show original as ghost
+
+  // Original eq ghost when tax active
+  if(c.hasTax && c.base.Q>0 && c.base.P>0){
+    const gc=tc(c.base.Q,c.base.P);
+    ctx.beginPath(); ctx.arc(gc.x,gc.y,4,0,Math.PI*2);
+    ctx.fillStyle='#ccc'; ctx.fill();
+    ctx.fillStyle='#aaa'; ctx.font='italic 11px Georgia,serif'; ctx.textAlign='left';
+    ctx.fillText('E₀',gc.x+7,gc.y-3);
+  }
+
+  // Main equilibrium
+  const eq2 = c.hasTax ? c.taxEq : c.base;
+  if(!eq2||eq2.Q<=0||eq2.P<=0||eq2.Q>maxQ||eq2.P>maxP) return;
+  const ec=tc(eq2.Q,eq2.P);
+
+  ctx.setLineDash([4,5]); ctx.strokeStyle='#bbb'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(ec.x,ec.y); ctx.lineTo(ec.x,H-PAD.b);
+  ctx.moveTo(ec.x,ec.y); ctx.lineTo(PAD.l,ec.y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Pp dashed line if tax
+  if(c.hasTax && c.Pp>0 && c.Pp<maxP){
+    const ppc=tc(eq2.Q,c.Pp);
+    ctx.setLineDash([4,5]); ctx.strokeStyle='#bbb'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(ppc.x,ppc.y); ctx.lineTo(PAD.l,ppc.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#888'; ctx.font='italic 12px Georgia,serif'; ctx.textAlign='right';
+    ctx.fillText('Pp',PAD.l-6,ppc.y+4);
+    // Tax wedge bracket
+    ctx.strokeStyle='#1a8a3c'; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(ec.x+16,ec.y); ctx.lineTo(ec.x+22,ec.y);
+    ctx.lineTo(ec.x+22,ppc.y); ctx.lineTo(ec.x+16,ppc.y); ctx.stroke();
+    ctx.fillStyle='#1a8a3c'; ctx.font='11px Courier New'; ctx.textAlign='left';
+    ctx.fillText('t',ec.x+26,(ec.y+ppc.y)/2+4);
+  }
+
+  ctx.beginPath(); ctx.arc(ec.x,ec.y,5,0,Math.PI*2);
+  ctx.fillStyle='#2a2a2a'; ctx.fill();
+  ctx.fillStyle='#444'; ctx.font='italic 12px Georgia,serif';
+  ctx.textAlign='center'; ctx.fillText(c.hasTax?'Q*ₜ':'Q*',ec.x,H-PAD.b+15);
+  ctx.textAlign='right'; ctx.fillText(c.hasTax?'Pc':'P*',PAD.l-6,ec.y+4);
+}
+
+function shadeCS(c){
+  const eq2=c.hasTax?c.taxEq:c.base; if(!eq2||eq2.Q<=0) return;
+  const Pc=c.hasTax?c.Pc:eq2.P;
+  ctx.fillStyle='rgba(26,95,168,0.14)';
+  ctx.beginPath(); const top=tc(0,S.da); ctx.moveTo(top.x,top.y);
+  for(let i=0;i<=100;i++){const Q=i/100*eq2.Q; const c2=tc(Q,S.da-S.db*Q); ctx.lineTo(c2.x,c2.y);}
+  const ec=tc(eq2.Q,Pc); const bc=tc(0,Pc);
+  ctx.lineTo(ec.x,ec.y); ctx.lineTo(bc.x,bc.y); ctx.closePath(); ctx.fill();
+  const lc=tc(eq2.Q*0.22,S.da-(S.da-Pc)*0.32);
+  ctx.fillStyle='#1a5fa8'; ctx.font='italic 12px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('CS',lc.x,lc.y);
+}
+
+function shadePS(c){
+  const eq2=c.hasTax?c.taxEq:c.base; if(!eq2||eq2.Q<=0) return;
+  const Pp=c.hasTax?c.Pp:eq2.P;
+  ctx.fillStyle='rgba(179,58,26,0.14)';
+  ctx.beginPath(); const bot=tc(0,S.sc); ctx.moveTo(bot.x,bot.y);
+  for(let i=0;i<=100;i++){const Q=i/100*eq2.Q; const c2=tc(Q,S.sc+S.sd*Q); ctx.lineTo(c2.x,c2.y);}
+  const ec=tc(eq2.Q,Pp); const bc=tc(0,Pp);
+  ctx.lineTo(ec.x,ec.y); ctx.lineTo(bc.x,bc.y); ctx.closePath(); ctx.fill();
+  const lc=tc(eq2.Q*0.22,S.sc+(Pp-S.sc)*0.45);
+  ctx.fillStyle='#b33a1a'; ctx.font='italic 12px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('PS',lc.x,lc.y);
+}
+
+function shadeTax(c){
+  if(!c.hasTax) return;
+  const Qt=c.taxEq.Q;
+  ctx.fillStyle='rgba(30,140,60,0.14)';
+  ctx.beginPath();
+  const tl=tc(0,c.Pc),tr=tc(Qt,c.Pc),br=tc(Qt,c.Pp),bl=tc(0,c.Pp);
+  ctx.moveTo(tl.x,tl.y); ctx.lineTo(tr.x,tr.y); ctx.lineTo(br.x,br.y); ctx.lineTo(bl.x,bl.y); ctx.closePath(); ctx.fill();
+  const lc=tc(Qt*0.5,(c.Pc+c.Pp)/2);
+  ctx.fillStyle='#1a8a3c'; ctx.font='italic 11px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('TR',lc.x,lc.y);
+}
+
+function shadeDWL(c){
+  if(!c.hasTax) return;
+  const Qt=c.taxEq.Q, Qb=c.base.Q;
+  ctx.fillStyle='rgba(100,0,150,0.14)';
+  ctx.beginPath();
+  ctx.moveTo(tc(Qt,c.Pc).x,tc(Qt,c.Pc).y);
+  for(let i=100;i>=0;i--){const Q=Qt+(i/100)*(Qb-Qt); const cc=tc(Q,S.da-S.db*Q); ctx.lineTo(cc.x,cc.y);}
+  for(let i=0;i<=100;i++){const Q=Qt+(i/100)*(Qb-Qt); const cc=tc(Q,S.sc+S.sd*Q); ctx.lineTo(cc.x,cc.y);}
+  ctx.lineTo(tc(Qt,c.Pp).x,tc(Qt,c.Pp).y); ctx.closePath(); ctx.fill();
+  const lc=tc((Qt+Qb)/2,(c.Pc+c.Pp)/2);
+  ctx.fillStyle='#7a2a9a'; ctx.font='italic 11px Georgia,serif'; ctx.textAlign='center'; ctx.fillText('DWL',lc.x,lc.y);
+}
+
+function drawFloor(c){
+  if(!c.hasFloor) return;
+  const {maxQ}=scale(); const fl=S.floor;
+  ctx.strokeStyle='#c8960a'; ctx.lineWidth=2; ctx.setLineDash([8,4]);
+  const l=tc(0,fl),r=tc(maxQ,fl);
+  ctx.beginPath(); ctx.moveTo(l.x,l.y); ctx.lineTo(r.x,r.y); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#8a6200'; ctx.font='12px Courier New'; ctx.textAlign='left';
+  ctx.fillText('floor = '+fl,l.x+4,l.y-6);
+  if(c.surShort&&c.surShort.type==='surplus'){
+    const {Qd,Qs}=c.surShort;
+    const qdc=tc(Qd,fl),qsc=tc(Qs,fl);
+    ctx.strokeStyle='#c8960a'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(qdc.x,qdc.y+10); ctx.lineTo(qsc.x,qsc.y+10); ctx.stroke();
+    ctx.font='11px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#8a6200';
+    ctx.fillText('surplus ΔQ='+(Math.round((Qs-Qd)*10)/10),(qdc.x+qsc.x)/2,qdc.y+24);
+  }
+}
+
+function drawCeil(c){
+  if(!c.hasCeil) return;
+  const {maxQ}=scale(); const cl=S.ceil;
+  ctx.strokeStyle='#c83030'; ctx.lineWidth=2; ctx.setLineDash([8,4]);
+  const l=tc(0,cl),r=tc(maxQ,cl);
+  ctx.beginPath(); ctx.moveTo(l.x,l.y); ctx.lineTo(r.x,r.y); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#8a1a1a'; ctx.font='12px Courier New'; ctx.textAlign='left';
+  ctx.fillText('ceiling = '+cl,l.x+4,cl===0?l.y-6:l.y+16);
+  if(c.surShort&&c.surShort.type==='shortage'){
+    const {Qd,Qs}=c.surShort;
+    const qdc=tc(Qd,cl),qsc=tc(Qs,cl);
+    ctx.strokeStyle='#c83030'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(qsc.x,qsc.y+10); ctx.lineTo(qdc.x,qdc.y+10); ctx.stroke();
+    ctx.font='11px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#8a1a1a';
+    ctx.fillText('shortage ΔQ='+(Math.round((Qd-Qs)*10)/10),(qsc.x+qdc.x)/2,qsc.y+24);
+  }
+}
+
+// --- Results ---
+function f(n){return Math.round(n*10)/10;}
+function fm(n){return n>9999?(n/1000).toFixed(1)+'k':Math.round(n);}
+
+function updateResults(c){
+  const eq2=c.hasTax?c.taxEq:c.base;
+  let h='';
+  h+=`<tr><td>Q*</td><td>${f(eq2.Q)}</td></tr>`;
+  h+=`<tr><td>P*</td><td>${f(eq2.P)}</td></tr>`;
+  if(c.hasTax){
+    h+=`<tr><td>Pc</td><td>${f(c.Pc)}</td></tr>`;
+    h+=`<tr><td>Pp</td><td>${f(c.Pp)}</td></tr>`;
+  }
+  h+=`<tr><td class="rcs">CS</td><td class="rcs">${fm(c.cs)}</td></tr>`;
+  h+=`<tr><td class="rps">PS</td><td class="rps">${fm(c.ps)}</td></tr>`;
+  if(c.hasTax){
+    h+=`<tr><td class="rtax">Tax revenue</td><td class="rtax">${fm(c.taxRev)}</td></tr>`;
+    h+=`<tr><td class="rdwl">DWL</td><td class="rdwl">${fm(c.dwl)}</td></tr>`;
+    h+=`<tr><td>Total surplus</td><td>${fm(c.cs+c.ps+c.taxRev)}</td></tr>`;
+  } else {
+    if(c.dwl>0) h+=`<tr><td class="rdwl">DWL</td><td class="rdwl">${fm(c.dwl)}</td></tr>`;
+    h+=`<tr><td>Total surplus</td><td>${fm(c.cs+c.ps)}</td></tr>`;
+  }
+  if(c.surShort){
+    const ss=c.surShort;
+    const amt=ss.type==='surplus'?f(ss.Qs-ss.Qd):f(ss.Qd-ss.Qs);
+    h+=`<tr><td>${ss.type}</td><td>${amt} units</td></tr>`;
+  }
+  document.getElementById('rt').innerHTML=h;
+}
+
+function updateAlgebra(c){
+  const {da,db,sc,sd,tax,floor,ceil}=S;
+  const b=c.base;
+  let L=[];
+  L.push(`<span class="cm">// Demand:  P = ${da} − ${db}·Q`);
+  L.push(`// Supply:  P = ${sc} + ${sd}·Q</span>`);
+  L.push('');
+  L.push(`<span class="cm">// Equilibrium: set D = S</span>`);
+  L.push(`${da} − ${db}Q  =  ${sc} + ${sd}Q`);
+  L.push(`${da-sc}  =  ${db+sd}Q`);
+  L.push(`<b>Q* = ${f(b.Q)},  P* = ${f(b.P)}</b>`);
+  if(c.hasTax){
+    L.push('');
+    L.push(`<span class="cm">// Excise tax t = ${tax}: supply shifts to P = ${sc+tax} + ${sd}·Q</span>`);
+    L.push(`${da} − ${db}Q  =  ${sc+tax} + ${sd}Q`);
+    L.push(`${da-(sc+tax)}  =  ${db+sd}Q`);
+    L.push(`<b>Q*ₜ = ${f(c.taxEq.Q)},  Pc = ${f(c.Pc)},  Pp = ${f(c.Pp)}</b>`);
+    L.push(`Tax rev = ${tax} × ${f(c.taxEq.Q)} = <b>${fm(c.taxRev)}</b>`);
+    L.push(`DWL = ½ × ${tax} × (${f(b.Q)} − ${f(c.taxEq.Q)}) = <b>${fm(c.dwl)}</b>`);
+  }
+  if(c.hasFloor){
+    L.push('');
+    L.push(`<span class="cm">// Price floor = ${floor} > P* = ${f(b.P)}</span>`);
+    L.push(`Qd: ${da} − ${db}·Qd = ${floor}  →  Qd = ${f((da-floor)/db)}`);
+    L.push(`Qs: ${sc} + ${sd}·Qs = ${floor}  →  Qs = ${f((floor-sc)/sd)}`);
+    L.push(`<b>Surplus = ${f((floor-sc)/sd - (da-floor)/db)} units</b>`);
+  }
+  if(c.hasCeil){
+    L.push('');
+    L.push(`<span class="cm">// Price ceiling = ${ceil} < P* = ${f(b.P)}</span>`);
+    L.push(`Qd: ${da} − ${db}·Qd = ${ceil}  →  Qd = ${f((da-ceil)/db)}`);
+    L.push(`Qs: ${sc} + ${sd}·Qs = ${ceil}  →  Qs = ${f((ceil-sc)/sd)}`);
+    L.push(`<b>Shortage = ${f((da-ceil)/db - (ceil-sc)/sd)} units</b>`);
+  }
+  document.getElementById('alg').innerHTML = L.join('<br>');
+}
+
+// --- Controls ---
+function fromInputs(){
+  S.da=parseFloat(document.getElementById('da').value)||100;
+  S.db=parseFloat(document.getElementById('db').value)||2;
+  S.sc=parseFloat(document.getElementById('sc').value)||10;
+  S.sd=parseFloat(document.getElementById('sd').value)||2;
+  S.tax=parseFloat(document.getElementById('tax').value)||0;
+  S.floor=parseFloat(document.getElementById('floor').value)||0;
+  S.ceil=parseFloat(document.getElementById('ceil').value)||0;
+  draw();
+}
+
+function shift(curve,dir){
+  if(curve==='D'){
+    const a=parseFloat(document.getElementById('amt-d').value)||10;
+    S.da=Math.max(S.sc+5, S.da+dir*a);
+    document.getElementById('da').value=Math.round(S.da);
+  } else {
+    const a=parseFloat(document.getElementById('amt-s').value)||10;
+    S.sc=Math.max(0,Math.min(S.da-5, S.sc+dir*a));
+    document.getElementById('sc').value=Math.round(S.sc);
+  }
+  draw();
+}
+
+function tog(k){
+  S.show[k]=!S.show[k];
+  const b=document.getElementById('b-'+k);
+  b.className='ob'+(S.show[k]?' a-'+k:'');
+  draw();
+}
+
+function syncInputs(){
+  document.getElementById('da').value=S.da;
+  document.getElementById('db').value=S.db;
+  document.getElementById('sc').value=S.sc;
+  document.getElementById('sd').value=S.sd;
+  document.getElementById('tax').value=S.tax;
+  document.getElementById('floor').value=S.floor;
+  document.getElementById('ceil').value=S.ceil;
+}
+
+function reset(){
+  S={...S,da:100,db:2,sc:10,sd:2,tax:0,floor:0,ceil:0,
+     show:{cs:false,ps:false,dwl:false,tax:false,floor:false,ceil:false}};
+  ['cs','ps','dwl','tax','floor','ceil'].forEach(k=>document.getElementById('b-'+k).className='ob');
+  document.getElementById('sc-sel').value='';
+  document.getElementById('sc-text').textContent='';
+  syncInputs(); draw();
+}
+
+// --- Scenarios ---
+const SCEN = {
+  hormuz:{text:"Iran closes the Strait of Hormuz, blocking ~20% of global oil shipments. Demand for Canadian oil rises as buyers seek alternatives. Shift the demand curve right to show the effect on Canadian oil prices and quantity traded.",
+    da:120,db:2,sc:20,sd:1.5,tax:0,floor:0,ceil:0},
+  vancouver:{text:"The BC government imposes a rent ceiling of $2,000/month in Vancouver, below the market equilibrium of $2,800. Set the ceiling and show the resulting housing shortage. Who gains and who loses?",
+    da:5000,db:50,sc:500,sd:50,tax:0,floor:0,ceil:2000},
+  minwage:{text:"BC raises the minimum wage to $18/hr, above the market-clearing wage of $14 for low-skill labour. Set the price floor. Calculate the resulting labour surplus (unemployment) and the welfare effects.",
+    da:30,db:0.5,sc:8,sd:0.5,tax:0,floor:18,ceil:0},
+  gastax:{text:"The federal government introduces a $10/unit excise tax on gasoline. Find the new consumer price, producer price, tax revenue, and deadweight loss. How is the tax burden shared between buyers and sellers?",
+    da:100,db:2,sc:10,sd:2,tax:10,floor:0,ceil:0},
+  carbon:{text:"Canada's carbon pricing adds $20/unit to oil production costs, modelled as an upward shift in the supply curve. Calculate the change in consumer surplus, producer surplus, government revenue, and deadweight loss.",
+    da:100,db:1.5,sc:15,sd:1.5,tax:20,floor:0,ceil:0},
+};
+
+function loadScenario(){
+  const k=document.getElementById('sc-sel').value;
+  if(!k){reset();return;}
+  const sc=SCEN[k]; if(!sc) return;
+  S.da=sc.da; S.db=sc.db; S.sc=sc.sc; S.sd=sc.sd;
+  S.tax=sc.tax; S.floor=sc.floor; S.ceil=sc.ceil;
+  S.show={cs:false,ps:false,dwl:false,tax:false,floor:false,ceil:false};
+  ['cs','ps','dwl','tax','floor','ceil'].forEach(k2=>document.getElementById('b-'+k2).className='ob');
+  // Auto-show relevant overlays
+  if(sc.tax>0){['cs','ps','tax','dwl'].forEach(k2=>{S.show[k2]=true;document.getElementById('b-'+k2).className='ob a-'+k2;});}
+  if(sc.floor>0){S.show.floor=true;document.getElementById('b-floor').className='ob a-floor';}
+  if(sc.ceil>0){S.show.ceil=true;document.getElementById('b-ceil').className='ob a-ceil';}
+  syncInputs();
+  document.getElementById('sc-text').textContent=sc.text;
+  draw();
+}
+
+// --- Drag ---
+function evPos(e){
+  const r=cv.getBoundingClientRect();
+  const sx=cv.width/r.width, sy=cv.height/r.height;
+  const cx=e.touches?e.touches[0].clientX:e.clientX;
+  const cy=e.touches?e.touches[0].clientY:e.clientY;
+  return {x:(cx-r.left)*sx, y:(cy-r.top)*sy};
+}
+
+function hitD(Q,P){const {maxP}=scale(); return Math.abs(P-(S.da-S.db*Q))<maxP*0.05;}
+function hitS(Q,P){const {maxP}=scale(); return Math.abs(P-((S.sc+(S.tax||0))+S.sd*Q))<maxP*0.05;}
+
+cv.addEventListener('mousedown',e=>{
+  const p=evPos(e); const d=td(p.x,p.y);
+  if(hitD(d.Q,d.P)){S.drag='D';S.anchor=d;}
+  else if(hitS(d.Q,d.P)){S.drag='S';S.anchor=d;}
+});
+cv.addEventListener('mousemove',e=>{
+  const p=evPos(e); const d=td(p.x,p.y);
+  if(!S.drag){cv.style.cursor=(hitD(d.Q,d.P)||hitS(d.Q,d.P))?'grab':'crosshair';return;}
+  cv.style.cursor='grabbing';
+  const dP=d.P-S.anchor.P;
+  if(S.drag==='D'){S.da=Math.max(S.sc+5,S.da+dP);document.getElementById('da').value=Math.round(S.da);}
+  else{S.sc=Math.max(0,Math.min(S.da-5,S.sc+dP));document.getElementById('sc').value=Math.round(S.sc);}
+  S.anchor=d; draw();
+});
+cv.addEventListener('mouseup',()=>{S.drag=null;});
+cv.addEventListener('mouseleave',()=>{S.drag=null;});
+cv.addEventListener('touchstart',e=>{e.preventDefault();const p=evPos(e);const d=td(p.x,p.y);if(hitD(d.Q,d.P)){S.drag='D';S.anchor=d;}else if(hitS(d.Q,d.P)){S.drag='S';S.anchor=d;}},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();if(!S.drag)return;const p=evPos(e);const d=td(p.x,p.y);const dP=d.P-S.anchor.P;if(S.drag==='D'){S.da=Math.max(S.sc+5,S.da+dP);document.getElementById('da').value=Math.round(S.da);}else{S.sc=Math.max(0,Math.min(S.da-5,S.sc+dP));document.getElementById('sc').value=Math.round(S.sc);}S.anchor=d;draw();},{passive:false});
+cv.addEventListener('touchend',()=>{S.drag=null;});
+
+window.addEventListener('resize',resize);
+resize();
+</script>
+</body>
+</html>
