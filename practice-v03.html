@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Arrow — Supply & Demand</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+/* ─── Design tokens ──────────────────────────────────── */
+:root {
+  --paper:    #f5f1e8;
+  --sheet:    #faf8f2;
+  --vellum:   #ede9de;
+  --ink:      #1c1810;
+  --ink-mid:  #4a4438;
+  --ink-faint:#9a9080;
+  --rule:     #ddd8cc;
+  --rule-lt:  #eae6da;
+
+  --d:        #1a4a82;
+  --d-fill:   rgba(26,74,130,0.10);
+  --d-fill2:  rgba(26,74,130,0.18);
+  --s:        #9e3015;
+  --s-fill:   rgba(158,48,21,0.10);
+  --s-fill2:  rgba(158,48,21,0.18);
+  --tax-c:    #1a6e38;
+  --tax-fill: rgba(26,110,56,0.14);
+  --dwl-c:    #5e1a8a;
+  --dwl-fill: rgba(94,26,138,0.14);
+
+  --step-num-size: 96px;
+}
+
+/* ─── Reset & base ───────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 300;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Header ─────────────────────────────────────────── */
+.site-header {
+  padding: 20px 40px 18px;
+  background: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+
+.site-header .wordmark {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--sheet);
+  letter-spacing: 0.02em;
+}
+
+.site-header .tagline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ─── Progress ───────────────────────────────────────── */
+.progress {
+  height: 2px;
+  background: var(--vellum);
+}
+.progress-fill {
+  height: 100%;
+  background: var(--d);
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+
+/* ─── Scenario card ──────────────────────────────────── */
+.scenario {
+  max-width: 820px;
+  margin: 48px auto 0;
+  padding: 0 24px;
+}
+
+.scenario-inner {
+  background: var(--sheet);
+  border: 0.5px solid var(--rule);
+  border-top: 3px solid var(--d);
+  padding: 32px 36px 28px;
+}
+
+.scenario-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--d);
+  margin-bottom: 10px;
+}
+
+.scenario-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.scenario-body {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--ink-mid);
+  max-width: 620px;
+}
+
+.given {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: var(--paper);
+  border-left: 2px solid var(--rule);
+}
+
+.given-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+
+.given-eqs {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 2.2;
+  color: var(--ink);
+}
+.given-eqs .eq-d { color: var(--d); font-weight: 500; }
+.given-eqs .eq-s { color: var(--s); font-weight: 500; }
+.given-eqs .eq-t { color: var(--tax-c); font-weight: 500; }
+
+/* ─── Steps ──────────────────────────────────────────── */
+.steps {
+  max-width: 820px;
+  margin: 40px auto 80px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.step {
+  background: var(--sheet);
+  border: 0.5px solid var(--rule);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.step + .step { border-top: none; }
+.step:first-child { border-radius: 3px 3px 0 0; }
+.step:last-child { border-radius: 0 0 3px 3px; }
+
+.step.locked {
+  background: var(--paper);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.step.done {
+  background: #f8fdf9;
+  border-color: #c8e8d0;
+}
+
+/* Step header */
+.step-hdr {
+  padding: 20px 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  user-select: none;
+  position: relative;
+}
+.step-hdr:hover { background: var(--paper); }
+
+.step-num-bg {
+  position: absolute;
+  right: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Playfair Display', serif;
+  font-size: var(--step-num-size);
+  font-weight: 600;
+  color: var(--vellum);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: -0.04em;
+}
+.step.done .step-num-bg { color: #d8eede; }
+
+.step-status {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-family: 'JetBrains Mono', monospace;
+}
+.step.done .step-status {
+  background: #d4eedc;
+  border-color: var(--tax-c);
+  color: var(--tax-c);
+  font-size: 13px;
+}
+
+.step-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+  flex: 1;
+}
+.step.done .step-title { color: var(--ink-mid); }
+
+.step-chevron {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  font-size: 10px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.step.open .step-chevron { transform: rotate(180deg); }
+
+/* Step body */
+.step-body {
+  display: none;
+  border-top: 0.5px solid var(--rule-lt);
+}
+.step.open .step-body { display: block; }
+
+.step-content {
+  padding: 28px 32px 32px;
+}
+
+.step-intro {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink-mid);
+  margin-bottom: 20px;
+  max-width: 560px;
+}
+
+/* ─── Diagram ────────────────────────────────────────── */
+.diagram-section {
+  margin-bottom: 28px;
+}
+
+canvas {
+  display: block;
+  border: 0.5px solid var(--rule);
+  background: var(--sheet);
+  border-radius: 2px;
+  touch-action: none;
+}
+
+.diagram-caption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 8px;
+}
+
+/* ─── Shading palette ────────────────────────────────── */
+.shade-layout {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.palette-panel { flex: 1; min-width: 220px; }
+
+.palette-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 12px;
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pal-btn {
+  padding: 11px 16px;
+  font-family: 'Source Serif 4', serif;
+  font-size: 13px;
+  font-weight: 400;
+  border: 0.5px solid;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.12s;
+  text-align: left;
+  background: var(--paper);
+}
+
+.pal-btn:hover { filter: brightness(0.97); }
+
+.pal-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.pal-btn.sel {
+  font-weight: 400;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+.pal-btn.placed { opacity: 0.35; pointer-events: none; font-style: italic; }
+.pal-btn.placed.ok { opacity: 1; }
+
+.pal-btn.pb-cs  { color: var(--d);     border-color: var(--d);     background: #f0f4fa; }
+.pal-btn.pb-ps  { color: var(--s);     border-color: var(--s);     background: #faf3f0; }
+.pal-btn.pb-tax { color: var(--tax-c); border-color: var(--tax-c); background: #f0f8f3; }
+.pal-btn.pb-dwl { color: var(--dwl-c); border-color: var(--dwl-c); background: #f6f0fb; }
+
+.shade-note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-faint);
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+/* ─── Algebra inputs ─────────────────────────────────── */
+.alg-inputs { display: flex; flex-direction: column; gap: 10px; }
+
+.alg-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.alg-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--ink-mid);
+  min-width: 200px;
+}
+
+.alg-input {
+  width: 110px;
+  padding: 8px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  border: 0.5px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 2px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.alg-input:focus { outline: none; border-color: var(--ink-mid); background: var(--sheet); }
+.alg-input.ok  { border-color: var(--tax-c); background: #f0f8f3; }
+.alg-input.err { border-color: var(--s);     background: #fdf4f1; }
+
+/* ─── Welfare grid ───────────────────────────────────── */
+.welfare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.w-item {}
+.w-item label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 5px;
+}
+.w-item input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  border: 0.5px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 2px;
+}
+.w-item input:focus { outline: none; border-color: var(--ink-mid); }
+.w-item input.ok  { border-color: var(--tax-c); background: #f0f8f3; }
+.w-item input.err { border-color: var(--s);     background: #fdf4f1; }
+
+/* ─── Button row ─────────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.btn-check {
+  padding: 9px 22px;
+  font-family: 'Source Serif 4', serif;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  background: var(--ink);
+  color: var(--sheet);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-check:hover { background: var(--ink-mid); }
+
+.btn-soft {
+  padding: 8px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  background: none;
+  color: var(--ink-faint);
+  border: 0.5px solid var(--rule);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn-soft:hover { color: var(--ink-mid); border-color: var(--ink-mid); }
+
+.btn-next {
+  padding: 10px 24px;
+  font-family: 'Source Serif 4', serif;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  background: #f0f8f3;
+  color: var(--tax-c);
+  border: 0.5px solid var(--tax-c);
+  border-radius: 2px;
+  cursor: pointer;
+  display: none;
+  margin-top: 20px;
+  transition: all 0.15s;
+}
+.btn-next:hover { background: var(--tax-c); color: #fff; }
+
+/* ─── Feedback ───────────────────────────────────────── */
+.fb {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 2px;
+  font-size: 13px;
+  line-height: 1.7;
+  display: none;
+  border-left: 2px solid;
+}
+.fb.show { display: block; }
+.fb.ok   { background: #f2faf5; border-color: var(--tax-c); color: #1a4a28; }
+.fb.err  { background: #fdf2ef; border-color: var(--s);     color: #5a1a0a; }
+.fb.hint { background: #fdf8ee; border-color: #c8960a;      color: #5a4000; }
+
+/* ─── Working / algebra display ─────────────────────── */
+.working {
+  margin-top: 14px;
+  padding: 16px 20px;
+  background: var(--paper);
+  border: 0.5px solid var(--rule-lt);
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 2.1;
+  color: var(--ink);
+  display: none;
+}
+.working.show { display: block; }
+.working .cm { color: var(--ink-faint); font-style: italic; }
+.working .hi { color: var(--ink); font-weight: 500; }
+.working .rule { border: none; border-top: 0.5px solid var(--rule); margin: 8px 0; }
+
+/* ─── Complete card ──────────────────────────────────── */
+.complete-inner {
+  padding: 28px 32px;
+}
+.complete-inner h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--tax-c);
+  margin-bottom: 12px;
+}
+.complete-inner p {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink-mid);
+  margin-bottom: 8px;
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .scenario, .steps { padding: 0 16px; }
+  .scenario-inner, .step-content { padding: 20px; }
+  .welfare-grid { grid-template-columns: 1fr; }
+  .shade-layout { flex-direction: column; }
+  --step-num-size: 64px;
+}
+
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <span class="wordmark">Project Arrow</span>
+  <span class="tagline">guided practice — excise tax</span>
+</header>
+
+<div class="progress"><div class="progress-fill" id="prog"></div></div>
+
+<!-- ── Scenario ── -->
+<div class="scenario">
+  <div class="scenario-inner">
+    <div class="scenario-eyebrow">Practice problem · Supply &amp; demand</div>
+    <h1 class="scenario-title">Oil Markets &amp; the Strait of Hormuz</h1>
+    <p class="scenario-body">The Strait of Hormuz is a narrow waterway through which roughly 20% of global oil passes. A geopolitical crisis closes the strait. Simultaneously, the Canadian federal government has imposed an excise tax on oil producers.</p>
+    <div class="given">
+      <div class="given-label">Given</div>
+      <div class="given-eqs">
+        <span class="eq-d">Demand:</span>  P = 200 − 2Q<br>
+        <span class="eq-s">Supply:</span>  P = 20 + 2Q<br>
+        <span class="eq-t">Excise tax:</span>  t = $40 per unit
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Steps ── -->
+<div class="steps">
+
+  <!-- ══ 1 ══ -->
+  <div class="step open" id="s1">
+    <div class="step-hdr" onclick="tog('s1')">
+      <div class="step-status">1</div>
+      <div class="step-title">Find the pre-tax equilibrium</div>
+      <div class="step-chevron">▾</div>
+      <div class="step-num-bg">1</div>
+    </div>
+    <div class="step-body">
+      <div class="step-content">
+        <p class="step-intro">Set demand equal to supply and solve for the equilibrium quantity and price.</p>
+
+        <div class="alg-inputs">
+          <div class="alg-row">
+            <span class="alg-label">Q* =</span>
+            <input class="alg-input" id="s1q" type="number" placeholder="?">
+            <span style="font-size:13px;color:var(--ink-faint);font-style:italic">units</span>
+          </div>
+          <div class="alg-row">
+            <span class="alg-label">P* =</span>
+            <input class="alg-input" id="s1p" type="number" placeholder="$?">
+            <span style="font-size:13px;color:var(--ink-faint);font-style:italic">$/unit</span>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-check" onclick="chk1()">Check</button>
+          <button class="btn-soft" onclick="showEl('h1')">Hint</button>
+          <button class="btn-soft" onclick="showEl('sol1')">Show working</button>
+        </div>
+
+        <div class="fb hint" id="h1">Set 200 − 2Q = 20 + 2Q and collect the Q terms on one side: 180 = 4Q.</div>
+        <div class="fb" id="fb1"></div>
+
+        <div class="working" id="sol1">
+          <span class="cm">// Set demand equal to supply</span><br>
+          200 − 2Q  =  20 + 2Q<br>
+          180  =  4Q<br>
+          <span class="hi">Q* = 45</span><div class="rule"></div>
+          <span class="cm">// Substitute back into demand</span><br>
+          P* = 200 − 2(45)  =  200 − 90<br>
+          <span class="hi">P* = 110</span>
+        </div>
+
+        <button class="btn-next" id="nb1" onclick="nxt(1)">Continue to step 2 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 2 ══ -->
+  <div class="step locked" id="s2">
+    <div class="step-hdr" onclick="tog('s2')">
+      <div class="step-status">2</div>
+      <div class="step-title">Shade consumer and producer surplus</div>
+      <div class="step-chevron">▾</div>
+      <div class="step-num-bg">2</div>
+    </div>
+    <div class="step-body">
+      <div class="step-content">
+        <p class="step-intro">Select a region from the palette, then click and drag on the diagram to shade it. Release when done — we'll check whether your shading covers the right area.</p>
+
+        <div class="shade-layout">
+          <div class="diagram-section" style="flex-shrink:0">
+            <canvas id="cv2" width="480" height="380"></canvas>
+            <div class="diagram-caption">Fig. 1 — pre-tax equilibrium</div>
+          </div>
+          <div class="palette-panel">
+            <div class="palette-eyebrow">Region to shade</div>
+            <div class="palette">
+              <button class="pal-btn pb-cs" id="pb2-cs" onclick="sel2('cs')">
+                <div class="pal-swatch"></div>Consumer surplus
+              </button>
+              <button class="pal-btn pb-ps" id="pb2-ps" onclick="sel2('ps')">
+                <div class="pal-swatch"></div>Producer surplus
+              </button>
+            </div>
+            <p class="shade-note">Drag to paint. You need to cover most of the correct region to get credit — accuracy matters more than neatness.</p>
+            <div class="fb" id="fb2" style="margin-top:14px"></div>
+            <div class="btn-row" style="margin-top:12px">
+              <button class="btn-soft" onclick="showEl('h2')">Hint</button>
+              <button class="btn-soft" onclick="revS2()">Show answer</button>
+            </div>
+            <div class="fb hint" id="h2">CS is the triangle above P* = 110 and below the demand curve. PS is the triangle below P* = 110 and above the supply curve.</div>
+          </div>
+        </div>
+
+        <button class="btn-next" id="nb2" onclick="nxt(2)">Continue to step 3 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 3 ══ -->
+  <div class="step locked" id="s3">
+    <div class="step-hdr" onclick="tog('s3')">
+      <div class="step-status">3</div>
+      <div class="step-title">Apply the excise tax — find new prices and quantity</div>
+      <div class="step-chevron">▾</div>
+      <div class="step-num-bg">3</div>
+    </div>
+    <div class="step-body">
+      <div class="step-content">
+        <p class="step-intro">The $40 excise tax shifts supply upward by $40. The new supply curve is P = 60 + 2Q. Solve for the new equilibrium.</p>
+
+        <div class="alg-inputs">
+          <div class="alg-row">
+            <span class="alg-label">New quantity  Q*ₜ =</span>
+            <input class="alg-input" id="s3q" type="number" placeholder="?">
+          </div>
+          <div class="alg-row">
+            <span class="alg-label">Consumer price  Pc =</span>
+            <input class="alg-input" id="s3pc" type="number" placeholder="$?">
+          </div>
+          <div class="alg-row">
+            <span class="alg-label">Producer price  Pp =</span>
+            <input class="alg-input" id="s3pp" type="number" placeholder="$?">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-check" onclick="chk3()">Check</button>
+          <button class="btn-soft" onclick="showEl('h3')">Hint</button>
+          <button class="btn-soft" onclick="showEl('sol3')">Show working</button>
+        </div>
+
+        <div class="fb hint" id="h3">Set 200 − 2Q = 60 + 2Q. Then read Pc from the demand curve at Q*ₜ. Producer price: Pp = Pc − t.</div>
+        <div class="fb" id="fb3"></div>
+
+        <div class="working" id="sol3">
+          <span class="cm">// New supply: P = (20 + 40) + 2Q = 60 + 2Q</span><br>
+          200 − 2Q  =  60 + 2Q<br>
+          140  =  4Q<br>
+          <span class="hi">Q*ₜ = 35</span><div class="rule"></div>
+          <span class="cm">// Consumer price (demand curve at Q*ₜ = 35)</span><br>
+          Pc = 200 − 2(35)  =  <span class="hi">130</span><div class="rule"></div>
+          <span class="cm">// Producer price = consumer price minus tax</span><br>
+          Pp = 130 − 40  =  <span class="hi">90</span><div class="rule"></div>
+          <span class="cm">// Burden split: consumers +20, producers −20</span><br>
+          <span class="cm">// Equal because slopes are equal (b = d = 2)</span>
+        </div>
+
+        <button class="btn-next" id="nb3" onclick="nxt(3)">Continue to step 4 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 4 ══ -->
+  <div class="step locked" id="s4">
+    <div class="step-hdr" onclick="tog('s4')">
+      <div class="step-status">4</div>
+      <div class="step-title">Shade all four welfare regions on the post-tax diagram</div>
+      <div class="step-chevron">▾</div>
+      <div class="step-num-bg">4</div>
+    </div>
+    <div class="step-body">
+      <div class="step-content">
+        <p class="step-intro">The diagram shows both supply curves and the tax wedge. Select each region and shade it on the diagram.</p>
+
+        <div class="shade-layout">
+          <div class="diagram-section" style="flex-shrink:0">
+            <canvas id="cv4" width="480" height="380"></canvas>
+            <div class="diagram-caption">Fig. 2 — post-tax equilibrium</div>
+          </div>
+          <div class="palette-panel">
+            <div class="palette-eyebrow">Region to shade</div>
+            <div class="palette">
+              <button class="pal-btn pb-cs"  id="pb4-cs"  onclick="sel4('cs')"><div class="pal-swatch"></div>Consumer surplus</button>
+              <button class="pal-btn pb-ps"  id="pb4-ps"  onclick="sel4('ps')"><div class="pal-swatch"></div>Producer surplus</button>
+              <button class="pal-btn pb-tax" id="pb4-tax" onclick="sel4('tax')"><div class="pal-swatch"></div>Tax revenue</button>
+              <button class="pal-btn pb-dwl" id="pb4-dwl" onclick="sel4('dwl')"><div class="pal-swatch"></div>Deadweight loss</button>
+            </div>
+            <p class="shade-note">DWL is the small triangle between the two equilibria — paint within that triangle. The tolerance is generous for small regions.</p>
+            <div class="fb" id="fb4" style="margin-top:14px"></div>
+            <div class="btn-row" style="margin-top:12px">
+              <button class="btn-soft" onclick="showEl('h4')">Hint</button>
+              <button class="btn-soft" onclick="revS4()">Show answer</button>
+            </div>
+            <div class="fb hint" id="h4">CS: above Pc = 130, below demand. PS: above original supply, below Pp = 90. Tax revenue: rectangle between Pc and Pp up to Q*ₜ = 35. DWL: triangle between Q*ₜ = 35 and Q* = 45.</div>
+          </div>
+        </div>
+
+        <button class="btn-next" id="nb4" onclick="nxt(4)">Continue to step 5 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 5 ══ -->
+  <div class="step locked" id="s5">
+    <div class="step-hdr" onclick="tog('s5')">
+      <div class="step-status">5</div>
+      <div class="step-title">Calculate the welfare effects</div>
+      <div class="step-chevron">▾</div>
+      <div class="step-num-bg">5</div>
+    </div>
+    <div class="step-body">
+      <div class="step-content">
+        <p class="step-intro">Using the pre- and post-tax equilibria, calculate each welfare area using triangle and rectangle formulas.</p>
+
+        <div class="welfare-grid">
+          <div class="w-item"><label>Consumer surplus (CS)</label><input id="w-cs" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Producer surplus (PS)</label><input id="w-ps" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Tax revenue (TR)</label><input id="w-tr" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Deadweight loss (DWL)</label><input id="w-dwl" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Post-tax total surplus</label><input id="w-ts" type="number" placeholder="?"></div>
+          <div class="w-item"><label>Pre-tax total surplus</label><input id="w-ts0" type="number" placeholder="?"></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-check" onclick="chk5()">Check</button>
+          <button class="btn-soft" onclick="showEl('h5')">Hint</button>
+          <button class="btn-soft" onclick="showEl('sol5')">Show working</button>
+        </div>
+
+        <div class="fb hint" id="h5">CS = ½(200 − Pc) × Q*ₜ &nbsp;·&nbsp; PS = ½(Pp − 20) × Q*ₜ &nbsp;·&nbsp; TR = t × Q*ₜ &nbsp;·&nbsp; DWL = ½ × t × (Q* − Q*ₜ)</div>
+        <div class="fb" id="fb5"></div>
+
+        <div class="working" id="sol5">
+          <span class="cm">// CS = ½ × (200 − 130) × 35</span><br>
+          CS = ½ × 70 × 35  =  <span class="hi">1,225</span><div class="rule"></div>
+          <span class="cm">// PS = ½ × (90 − 20) × 35</span><br>
+          PS = ½ × 70 × 35  =  <span class="hi">1,225</span><div class="rule"></div>
+          <span class="cm">// Tax revenue = 40 × 35</span><br>
+          TR  =  <span class="hi">1,400</span><div class="rule"></div>
+          <span class="cm">// DWL = ½ × 40 × (45 − 35)</span><br>
+          DWL = ½ × 40 × 10  =  <span class="hi">200</span><div class="rule"></div>
+          <span class="cm">// Post-tax total surplus</span><br>
+          TS = 1,225 + 1,225 + 1,400  =  <span class="hi">3,850</span><div class="rule"></div>
+          <span class="cm">// Pre-tax: ½ × (200 − 20) × 45</span><br>
+          TS₀ = ½ × 180 × 45  =  <span class="hi">4,050</span><div class="rule"></div>
+          <span class="cm">// Loss = DWL = 4,050 − 3,850 = 200 ✓</span>
+        </div>
+
+        <button class="btn-next" id="nb5" onclick="nxt(5)">Problem complete ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Complete ══ -->
+  <div class="step locked done" id="s6">
+    <div class="step-hdr">
+      <div class="step-status">✓</div>
+      <div class="step-title" style="color:var(--tax-c)">Problem complete</div>
+      <div class="step-num-bg" style="color:#d8eede">✓</div>
+    </div>
+    <div class="step-body">
+      <div class="complete-inner">
+        <h3>Summary</h3>
+        <p>Pre-tax equilibrium: Q* = 45, P* = 110. Total surplus = 4,050.</p>
+        <p>Post-tax (t = $40): Q*ₜ = 35, Pc = 130, Pp = 90. The $40 tax burden is shared equally — consumers pay $20 more, producers receive $20 less — because supply and demand have equal slopes.</p>
+        <p>Tax revenue = 1,400. Deadweight loss = 200. Total surplus falls by exactly the DWL — the permanent efficiency cost of the tax.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// PROBLEM CONSTANTS
+// ══════════════════════════════════════════
+const DA=200,DB=2,SC=20,SD=2,TAX=40;
+const Qs=(DA-SC)/(DB+SD);     // 45
+const Ps=DA-DB*Qs;             // 110
+const Qt=(DA-(SC+TAX))/(DB+SD); // 35
+const Pc=DA-DB*Qt;             // 130
+const Pp=Pc-TAX;               // 90
+const CS_=0.5*(DA-Pc)*Qt;      // 1225
+const PS_=0.5*(Pp-SC)*Qt;      // 1225
+const TR_=TAX*Qt;              // 1400
+const DWL_=0.5*TAX*(Qs-Qt);   // 200
+const TS_=CS_+PS_+TR_;         // 3850
+const TS0_=0.5*(DA-SC)*Qs;     // 4050
+
+// ══════════════════════════════════════════
+// STEP MANAGEMENT
+// ══════════════════════════════════════════
+let done=0;
+function tog(id){const el=document.getElementById(id);if(el.classList.contains('locked'))return;el.classList.toggle('open');}
+function nxt(n){
+  const el=document.getElementById('s'+n);
+  el.classList.add('done');el.classList.remove('open');
+  el.querySelector('.step-status').textContent='✓';
+  const nx=document.getElementById('s'+(n+1));
+  if(nx){nx.classList.remove('locked');nx.classList.add('open');}
+  done=Math.max(done,n);
+  document.getElementById('prog').style.width=(done/5*100)+'%';
+  if(n===1)initCv2();
+  if(n===3)initCv4();
+}
+function showEl(id){const el=document.getElementById(id);el.classList.add('show');}
+
+// ══════════════════════════════════════════
+// CANVAS DRAWING ENGINE
+// ══════════════════════════════════════════
+const CW=480,CH=380;
+const PAD={l:62,r:24,t:24,b:50};
+
+function sc_(){return{maxP:DA*1.2,maxQ:(DA/DB)*1.2};}
+function tc(Q,P,s){return{x:PAD.l+(Q/s.maxQ)*(CW-PAD.l-PAD.r),y:PAD.t+(1-P/s.maxP)*(CH-PAD.t-PAD.b)};}
+function td(x,y,s){return{Q:((x-PAD.l)/(CW-PAD.l-PAD.r))*s.maxQ,P:(1-(y-PAD.t)/(CH-PAD.t-PAD.b))*s.maxP};}
+
+function drawFrame(ctx,s){
+  // Subtle grid
+  ctx.strokeStyle='rgba(0,0,0,0.04)';ctx.lineWidth=0.5;
+  for(let i=1;i<=5;i++){
+    const{x}=tc(i/5*s.maxQ,0,s);ctx.beginPath();ctx.moveTo(x,PAD.t);ctx.lineTo(x,CH-PAD.b);ctx.stroke();
+    const{y}=tc(0,i/5*s.maxP,s);ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(CW-PAD.r,y);ctx.stroke();
+  }
+  // Axes — slightly heavier
+  ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,CH-PAD.b);ctx.lineTo(CW-PAD.r,CH-PAD.b);ctx.stroke();
+  // Tick marks
+  for(let i=1;i<=5;i++){
+    const Q=Math.round(i/5*s.maxQ);const{x}=tc(Q,0,s);
+    ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(x,CH-PAD.b);ctx.lineTo(x,CH-PAD.b+4);ctx.stroke();
+    const P=Math.round(i/5*s.maxP);const{y}=tc(0,P,s);
+    ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(PAD.l-4,y);ctx.stroke();
+  }
+  // Tick labels
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.font='11px JetBrains Mono, monospace';
+  for(let i=1;i<=5;i++){
+    const Q=Math.round(i/5*s.maxQ);const{x}=tc(Q,0,s);ctx.textAlign='center';ctx.fillText(Q,x,CH-PAD.b+16);
+    const P=Math.round(i/5*s.maxP);const{y}=tc(0,P,s);ctx.textAlign='right';ctx.fillText(P,PAD.l-8,y+4);
+  }
+  // Axis labels — italic serif
+  ctx.fillStyle='rgba(0,0,0,0.45)';ctx.font='italic 13px Source Serif 4, serif';
+  ctx.textAlign='center';ctx.fillText('quantity  (Q)',PAD.l+(CW-PAD.l-PAD.r)/2,CH-8);
+  ctx.save();ctx.translate(16,PAD.t+(CH-PAD.t-PAD.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText('price  (P)',0,0);ctx.restore();
+}
+
+function drawCurveLine(ctx,intercept,slope,isDemand,color,label,s,dashed){
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.lineWidth=dashed?1.6:2.8;
+  ctx.lineCap='round';
+  if(dashed){ctx.setLineDash([6,5]);ctx.globalAlpha=0.35;}
+  ctx.beginPath();let st=false;
+  for(let i=0;i<=400;i++){
+    const Q=i/400*s.maxQ*1.04;
+    const P=isDemand?intercept-slope*Q:intercept+slope*Q;
+    if(P<0||P>s.maxP*1.04||Q<0){st=false;continue;}
+    const c=tc(Q,P,s);
+    if(!st){ctx.moveTo(c.x,c.y);st=true;}else ctx.lineTo(c.x,c.y);
+  }
+  ctx.stroke();ctx.restore();
+  if(!dashed&&label){
+    const lQ=isDemand?(intercept/slope)*0.72:s.maxQ*0.72;
+    const lP=isDemand?intercept-slope*lQ:intercept+slope*lQ;
+    if(lP>0&&lP<s.maxP){
+      const lc=tc(lQ,lP,s);
+      ctx.fillStyle=color;
+      ctx.font='italic bold 15px Playfair Display, serif';
+      ctx.textAlign='left';
+      ctx.fillText(label,lc.x+6,lc.y-6);
+    }
+  }
+}
+
+function drawEqLines(ctx,Q,P,label,s){
+  const ec=tc(Q,P,s);
+  ctx.save();
+  ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(ec.x,ec.y);ctx.lineTo(ec.x,CH-PAD.b);
+  ctx.moveTo(ec.x,ec.y);ctx.lineTo(PAD.l,ec.y);ctx.stroke();
+  ctx.restore();
+  // Dot with subtle shadow
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
+  ctx.beginPath();ctx.arc(ec.x,ec.y,5.5,0,Math.PI*2);ctx.fillStyle='#1c1810';ctx.fill();
+  ctx.restore();
+  ctx.fillStyle='rgba(0,0,0,0.45)';ctx.font='11px JetBrains Mono, monospace';
+  ctx.textAlign='center';ctx.fillText(label+'Q='+Math.round(Q),ec.x,CH-PAD.b+16);
+  ctx.textAlign='right';ctx.fillText(label+'P='+Math.round(P),PAD.l-7,ec.y+4);
+}
+
+// ══════════════════════════════════════════
+// REGION POLYGONS
+// ══════════════════════════════════════════
+function poly_cs2(s){
+  const p=[];p.push(tc(0,DA,s));
+  for(let i=0;i<=60;i++){const Q=i/60*Qs;p.push(tc(Q,DA-DB*Q,s));}
+  p.push(tc(Qs,Ps,s));p.push(tc(0,Ps,s));return p;
+}
+function poly_ps2(s){
+  const p=[];p.push(tc(0,SC,s));
+  for(let i=0;i<=60;i++){const Q=i/60*Qs;p.push(tc(Q,SC+SD*Q,s));}
+  p.push(tc(Qs,Ps,s));p.push(tc(0,Ps,s));return p;
+}
+function poly_cs4(s){
+  const p=[];p.push(tc(0,DA,s));
+  for(let i=0;i<=60;i++){const Q=i/60*Qt;p.push(tc(Q,DA-DB*Q,s));}
+  p.push(tc(Qt,Pc,s));p.push(tc(0,Pc,s));return p;
+}
+function poly_ps4(s){
+  const p=[];p.push(tc(0,SC,s));
+  for(let i=0;i<=60;i++){const Q=i/60*Qt;p.push(tc(Q,SC+SD*Q,s));}
+  p.push(tc(Qt,Pp,s));p.push(tc(0,Pp,s));return p;
+}
+function poly_tax(s){return[tc(0,Pc,s),tc(Qt,Pc,s),tc(Qt,Pp,s),tc(0,Pp,s)];}
+function poly_dwl(s){
+  const p=[];p.push(tc(Qt,Pc,s));
+  for(let i=0;i<=30;i++){const Q=Qt+(i/30)*(Qs-Qt);p.push(tc(Q,DA-DB*Q,s));}
+  for(let i=30;i>=0;i--){const Q=Qt+(i/30)*(Qs-Qt);p.push(tc(Q,SC+SD*Q,s));}
+  p.push(tc(Qt,Pp,s));return p;
+}
+
+// ══════════════════════════════════════════
+// SHADING FILL (accepted)
+// ══════════════════════════════════════════
+function fillPoly(ctx,poly,color,label,lx,ly){
+  ctx.save();ctx.fillStyle=color;
+  ctx.beginPath();poly.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.closePath();ctx.fill();ctx.restore();
+  if(label){
+    ctx.fillStyle=color.replace(/[\d.]+\)$/,'0.9)');
+    ctx.font='italic 13px Source Serif 4, serif';ctx.textAlign='center';ctx.fillText(label,lx,ly);
+  }
+}
+
+// ══════════════════════════════════════════
+// CANVAS 2
+// ══════════════════════════════════════════
+let s2st,cv2c,cv2sh={cs:false,ps:false},cur2sel=null,painting2=false,cur2pts=new Set();
+
+function initCv2(){
+  const cv=document.getElementById('cv2');cv2c=cv.getContext('2d');s2st=sc_();
+  renderCv2();setupPaint(cv,2);
+}
+function renderCv2(){
+  const ctx=cv2c,s=s2st;ctx.clearRect(0,0,CW,CH);drawFrame(ctx,s);
+  const cs=poly_cs2(s),ps=poly_ps2(s);
+  if(cv2sh.cs){fillPoly(ctx,cs,'rgba(26,74,130,0.16)','CS',...lpt(s,Qt*0.15,DA-(DA-Ps)*0.28));}
+  if(cv2sh.ps){fillPoly(ctx,ps,'rgba(158,48,21,0.16)','PS',...lpt(s,Qt*0.15,SC+(Ps-SC)*0.38));}
+  // Live preview
+  if(painting2&&cur2sel&&cur2pts.size>0){
+    const pc=cur2sel==='cs'?'rgba(26,74,130,0.09)':'rgba(158,48,21,0.09)';
+    ctx.fillStyle=pc;
+    cur2pts.forEach(k=>{const[x,y]=k.split(',').map(Number);ctx.fillRect(x-3,y-3,6,6);});
+  }
+  drawCurveLine(ctx,DA,DB,true,'#1a4a82','D',s,false);
+  drawCurveLine(ctx,SC,SD,false,'#9e3015','S',s,false);
+  drawEqLines(ctx,Qs,Ps,'*',s);
+}
+function lpt(s,Q,P){const c=tc(Q,P,s);return[c.x,c.y];}
+
+function sel2(id){
+  cur2sel=id;
+  document.querySelectorAll('[id^="pb2-"]').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('pb2-'+id).classList.add('sel');
+}
+function chkShade2(){
+  if(!cur2sel)return;
+  const s=s2st;
+  const poly=cur2sel==='cs'?poly_cs2(s):poly_ps2(s);
+  const res=scoreShade(cur2pts,poly);
+  const fb=document.getElementById('fb2');
+  const thresh=cur2sel==='cs'?0.3:0.3;
+  if(res.cov>thresh&&res.miss<0.55){
+    cv2sh[cur2sel]=true;cur2pts=new Set();
+    document.getElementById('pb2-'+cur2sel).classList.add('placed','ok');
+    cur2sel=null;document.querySelectorAll('[id^="pb2-"]').forEach(b=>b.classList.remove('sel'));
+    renderCv2();
+    if(cv2sh.cs&&cv2sh.ps){
+      fb.className='fb ok show';fb.textContent='Both regions correctly shaded. CS = blue triangle, PS = red triangle.';
+      document.getElementById('nb2').style.display='inline-block';
+    } else {
+      fb.className='fb ok show';fb.textContent='Correct — now shade the other region.';
+    }
+  } else {
+    cur2pts=new Set();renderCv2();
+    fb.className='fb err show';
+    fb.textContent=res.cov<thresh?
+      'Not enough coverage — paint a larger area within the '+(cur2sel==='cs'?'upper':'lower')+' triangle.':
+      'Too much outside the region. '+(cur2sel==='cs'?'CS sits above P*=110 below the demand curve.':'PS sits below P*=110 above the supply curve.');
+  }
+}
+function revS2(){
+  cv2sh={cs:true,ps:true};cur2pts=new Set();painting2=false;renderCv2();
+  document.querySelectorAll('[id^="pb2-"]').forEach(b=>b.classList.add('placed','ok'));
+  document.getElementById('fb2').className='fb hint show';
+  document.getElementById('fb2').textContent='CS = triangle above P*=110 below demand. PS = triangle below P*=110 above supply.';
+  document.getElementById('nb2').style.display='inline-block';
+}
+
+// ══════════════════════════════════════════
+// CANVAS 4
+// ══════════════════════════════════════════
+let s4st,cv4c,cv4sh={cs:false,ps:false,tax:false,dwl:false},cur4sel=null,painting4=false,cur4pts=new Set();
+
+function initCv4(){
+  const cv=document.getElementById('cv4');cv4c=cv.getContext('2d');s4st=sc_();
+  renderCv4();setupPaint(cv,4);
+}
+function renderCv4(){
+  const ctx=cv4c,s=s4st;ctx.clearRect(0,0,CW,CH);drawFrame(ctx,s);
+  const R={cs:poly_cs4(s),ps:poly_ps4(s),tax:poly_tax(s),dwl:poly_dwl(s)};
+  const fills={cs:'rgba(26,74,130,0.16)',ps:'rgba(158,48,21,0.16)',tax:'rgba(26,110,56,0.18)',dwl:'rgba(94,26,138,0.18)'};
+  const lc={cs:lpt(s,Qt*0.14,DA-(DA-Pc)*0.28),ps:lpt(s,Qt*0.14,SC+(Pp-SC)*0.38),tax:lpt(s,Qt*0.5,(Pc+Pp)/2),dwl:lpt(s,(Qt+Qs)/2+1,(Pc+Pp)/2)};
+  const lbs={cs:'CS',ps:'PS',tax:'TR',dwl:'DWL'};
+  ['cs','ps','tax','dwl'].forEach(k=>{
+    if(cv4sh[k]) fillPoly(ctx,R[k],fills[k],lbs[k],...lc[k]);
+  });
+  // Live preview
+  if(painting4&&cur4sel&&cur4pts.size>0){
+    const pc={cs:'rgba(26,74,130,0.09)',ps:'rgba(158,48,21,0.09)',tax:'rgba(26,110,56,0.09)',dwl:'rgba(94,26,138,0.09)'};
+    ctx.fillStyle=pc[cur4sel]||'rgba(0,0,0,0.06)';
+    cur4pts.forEach(k=>{const[x,y]=k.split(',').map(Number);ctx.fillRect(x-3,y-3,6,6);});
+  }
+  // Original supply dashed
+  drawCurveLine(ctx,SC,SD,false,'#9e3015','',s,true);
+  // New supply
+  drawCurveLine(ctx,SC+TAX,SD,false,'#9e3015',"S'",s,false);
+  drawCurveLine(ctx,DA,DB,true,'#1a4a82','D',s,false);
+  // E0 ghost
+  const gc=tc(Qs,Ps,s);
+  ctx.beginPath();ctx.arc(gc.x,gc.y,3.5,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.font='11px JetBrains Mono';ctx.textAlign='left';ctx.fillText('E₀',gc.x+6,gc.y-3);
+  // New eq
+  const ec=tc(Qt,Pc,s),ppc=tc(Qt,Pp,s);
+  ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(ec.x,ec.y);ctx.lineTo(ec.x,CH-PAD.b);
+  ctx.moveTo(ec.x,ec.y);ctx.lineTo(PAD.l,ec.y);
+  ctx.moveTo(ppc.x,ppc.y);ctx.lineTo(PAD.l,ppc.y);ctx.stroke();ctx.restore();
+  ctx.save();ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
+  ctx.beginPath();ctx.arc(ec.x,ec.y,5.5,0,Math.PI*2);ctx.fillStyle='#1c1810';ctx.fill();ctx.restore();
+  ctx.fillStyle='rgba(0,0,0,0.4)';ctx.font='11px JetBrains Mono';
+  ctx.textAlign='center';ctx.fillText('Q*ₜ=35',ec.x,CH-PAD.b+16);
+  ctx.textAlign='right';ctx.fillText('Pc=130',PAD.l-7,ec.y+4);ctx.fillText('Pp=90',PAD.l-7,ppc.y+4);
+  // Tax wedge bracket
+  ctx.strokeStyle='rgba(26,110,56,0.7)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(ec.x+14,ec.y);ctx.lineTo(ec.x+20,ec.y);ctx.lineTo(ec.x+20,ppc.y);ctx.lineTo(ec.x+14,ppc.y);ctx.stroke();
+  ctx.fillStyle='rgba(26,110,56,0.8)';ctx.font='10px JetBrains Mono';ctx.textAlign='left';ctx.fillText('t=40',ec.x+24,(ec.y+ppc.y)/2+4);
+}
+
+function sel4(id){
+  cur4sel=id;
+  document.querySelectorAll('[id^="pb4-"]').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('pb4-'+id).classList.add('sel');
+}
+function chkShade4(){
+  if(!cur4sel)return;
+  const s=s4st;
+  const polys={cs:poly_cs4(s),ps:poly_ps4(s),tax:poly_tax(s),dwl:poly_dwl(s)};
+  const res=scoreShade(cur4pts,polys[cur4sel]);
+  const th=cur4sel==='dwl'?0.15:0.3;
+  const mth=cur4sel==='dwl'?0.75:0.58;
+  const fb=document.getElementById('fb4');
+  if(res.cov>th&&res.miss<mth){
+    cv4sh[cur4sel]=true;cur4pts=new Set();
+    document.getElementById('pb4-'+cur4sel).classList.add('placed','ok');
+    cur4sel=null;document.querySelectorAll('[id^="pb4-"]').forEach(b=>b.classList.remove('sel'));
+    renderCv4();
+    const rem=Object.keys(cv4sh).filter(k=>!cv4sh[k]);
+    if(rem.length===0){
+      fb.className='fb ok show';fb.textContent='All four regions correctly identified. The tax converts surplus into revenue and creates a permanent efficiency loss (DWL).';
+      document.getElementById('nb4').style.display='inline-block';
+    } else {
+      fb.className='fb ok show';fb.textContent='Correct. Remaining: '+rem.join(', ')+'.';
+    }
+  } else {
+    cur4pts=new Set();renderCv4();
+    const hints={
+      cs:'CS is the triangle above Pc = 130, below the demand curve.',
+      ps:'PS is the triangle above the original supply (dashed), below Pp = 90.',
+      tax:'Tax revenue is the rectangle between Pc = 130 and Pp = 90, from the axis to Q*ₜ = 35.',
+      dwl:'DWL is the small triangle between Q*ₜ = 35 and Q* = 45 — paint within that gap.'
+    };
+    fb.className='fb err show';
+    fb.textContent=(res.cov<th?'Not enough coverage — paint a larger area. ':'Too much outside the correct region. ')+hints[cur4sel];
+  }
+}
+function revS4(){
+  cv4sh={cs:true,ps:true,tax:true,dwl:true};cur4pts=new Set();painting4=false;renderCv4();
+  document.querySelectorAll('[id^="pb4-"]').forEach(b=>b.classList.add('placed','ok'));
+  document.getElementById('fb4').className='fb hint show';
+  document.getElementById('fb4').textContent='All regions revealed. CS and PS both shrink after the tax. TR = rectangle. DWL = small triangle.';
+  document.getElementById('nb4').style.display='inline-block';
+}
+
+// ══════════════════════════════════════════
+// PAINTING ENGINE
+// ══════════════════════════════════════════
+function ptInPoly(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+
+function polyArea(poly){
+  let a=0;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){a+=(poly[j].x+poly[i].x)*(poly[j].y-poly[i].y);}
+  return Math.abs(a)/2;
+}
+
+function scoreShade(pts,poly){
+  let hit=0,miss=0;
+  pts.forEach(k=>{
+    const[x,y]=k.split(',').map(Number);
+    if(ptInPoly(x,y,poly))hit++;else miss++;
+  });
+  const area=polyArea(poly);
+  const cov=hit/(area/9);
+  const mRatio=miss/(hit+miss+1);
+  return{cov,miss:mRatio,hit,total:hit+miss};
+}
+
+function setupPaint(cvEl,n){
+  let down=false;
+  function xy(e){
+    const r=cvEl.getBoundingClientRect();
+    const sx=cvEl.width/r.width,sy=cvEl.height/r.height;
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{x:Math.round((cx-r.left)*sx),y:Math.round((cy-r.top)*sy)};
+  }
+  function paint(x,y){
+    const brush=5;
+    for(let dx=-brush;dx<=brush;dx+=2){
+      for(let dy=-brush;dy<=brush;dy+=2){
+        if(dx*dx+dy*dy>brush*brush)continue;
+        const px=x+dx,py=y+dy;
+        if(px>PAD.l&&px<CW-PAD.r&&py>PAD.t&&py<CH-PAD.b){
+          if(n===2)cur2pts.add(px+','+py);else cur4pts.add(px+','+py);
+        }
+      }
+    }
+    if(n===2)renderCv2();else renderCv4();
+  }
+  function start(e){
+    const sel=n===2?cur2sel:cur4sel;
+    if(!sel)return;
+    down=true;
+    if(n===2){painting2=true;cur2pts=new Set();}
+    else{painting4=true;cur4pts=new Set();}
+    const{x,y}=xy(e);paint(x,y);
+  }
+  function move(e){if(!down)return;const{x,y}=xy(e);paint(x,y);}
+  function end(){
+    if(!down)return;down=false;
+    if(n===2){painting2=false;chkShade2();}
+    else{painting4=false;chkShade4();}
+  }
+  cvEl.addEventListener('mousedown',start);
+  cvEl.addEventListener('mousemove',move);
+  cvEl.addEventListener('mouseup',end);
+  cvEl.addEventListener('mouseleave',end);
+  cvEl.addEventListener('touchstart',e=>{e.preventDefault();start(e);},{passive:false});
+  cvEl.addEventListener('touchmove',e=>{e.preventDefault();move(e);},{passive:false});
+  cvEl.addEventListener('touchend',e=>{e.preventDefault();end();},{passive:false});
+}
+
+// ══════════════════════════════════════════
+// ALGEBRA CHECKS
+// ══════════════════════════════════════════
+function chk1(){
+  const q=+document.getElementById('s1q').value,p=+document.getElementById('s1p').value;
+  const qOk=Math.abs(q-Qs)<=1,pOk=Math.abs(p-Ps)<=1;
+  document.getElementById('s1q').className='alg-input '+(qOk?'ok':'err');
+  document.getElementById('s1p').className='alg-input '+(pOk?'ok':'err');
+  const fb=document.getElementById('fb1');
+  if(qOk&&pOk){
+    fb.className='fb ok show';
+    fb.textContent='Correct — Q* = 45, P* = 110. The market clears where demand meets supply.';
+    document.getElementById('nb1').style.display='inline-block';
+  } else {
+    fb.className='fb err show';
+    fb.textContent=(!qOk&&!pOk)?'Both values need work. Start by setting 200 − 2Q = 20 + 2Q.':
+      !qOk?'Q* needs checking. Collect terms: 180 = 4Q.':
+      'P* needs checking. Substitute Q* = 45 back into either curve equation.';
+  }
+}
+
+function chk3(){
+  const q=+document.getElementById('s3q').value,pc=+document.getElementById('s3pc').value,pp=+document.getElementById('s3pp').value;
+  const qOk=Math.abs(q-Qt)<=1,pcOk=Math.abs(pc-Pc)<=1,ppOk=Math.abs(pp-Pp)<=1;
+  document.getElementById('s3q').className='alg-input '+(qOk?'ok':'err');
+  document.getElementById('s3pc').className='alg-input '+(pcOk?'ok':'err');
+  document.getElementById('s3pp').className='alg-input '+(ppOk?'ok':'err');
+  const fb=document.getElementById('fb3');
+  if(qOk&&pcOk&&ppOk){
+    fb.className='fb ok show';
+    fb.textContent='Correct — Q*ₜ = 35, Pc = 130, Pp = 90. Equal slopes mean equal burden sharing.';
+    document.getElementById('nb3').style.display='inline-block';
+  } else {
+    fb.className='fb err show';
+    const m=[];
+    if(!qOk)m.push('Q*ₜ: set 200−2Q = 60+2Q');
+    if(!pcOk)m.push('Pc: read from demand at Q*ₜ = 35');
+    if(!ppOk)m.push('Pp: Pc − 40');
+    fb.textContent='Check: '+m.join('  ·  ')+'.';
+  }
+}
+
+function chk5(){
+  const ans={cs:CS_,ps:PS_,tr:TR_,dwl:DWL_,ts:TS_,ts0:TS0_};
+  const ids={cs:'w-cs',ps:'w-ps',tr:'w-tr',dwl:'w-dwl',ts:'w-ts',ts0:'w-ts0'};
+  let ok=true;
+  Object.keys(ans).forEach(k=>{
+    const el=document.getElementById(ids[k]);
+    const good=Math.abs(+el.value-ans[k])<=5;
+    el.className=good?'ok':'wrong';
+    if(!good)ok=false;
+  });
+  const fb=document.getElementById('fb5');
+  if(ok){
+    fb.className='fb ok show';
+    fb.textContent='All correct. The $200 deadweight loss is exactly the difference between pre-tax surplus (4,050) and post-tax surplus (3,850) — the permanent efficiency cost of the tax.';
+    document.getElementById('nb5').style.display='inline-block';
+  } else {
+    fb.className='fb err show';
+    fb.textContent='Some values need checking. Use the hint for the formulas, or show the working.';
+  }
+}
+</script>
+</body>
+</html>
