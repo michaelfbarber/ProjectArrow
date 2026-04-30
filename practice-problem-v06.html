@@ -17,7 +17,7 @@
   --green:#1a6e38; --red:#9e3015; --amber:#8a6000;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--paper);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;}
+body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--paper);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 
 /* Header */
 .hdr{padding:14px 32px;background:var(--ink);display:flex;align-items:baseline;gap:14px;}
@@ -29,7 +29,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--paper);co
 .progress-fill{height:100%;background:var(--d);transition:width 0.5s ease;width:0%;}
 
 /* Scenario */
-.scenario{max-width:900px;margin:32px auto 0;padding:0 24px;}
+.scenario{max-width:1280px;margin:32px auto 0;padding:0 32px;}
 .scenario-inner{background:var(--sheet);border:0.5px solid var(--rule);border-top:3px solid var(--d);padding:24px 28px;}
 .sc-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--d);margin-bottom:8px;}
 .sc-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;line-height:1.2;margin-bottom:10px;}
@@ -40,7 +40,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--paper);co
 .eq-d{color:var(--d);font-weight:500;} .eq-s{color:var(--s);font-weight:500;} .eq-t{color:var(--tax-c);font-weight:500;}
 
 /* Steps */
-.steps{max-width:900px;margin:20px auto 60px;padding:0 24px;display:flex;flex-direction:column;gap:2px;}
+.steps{max-width:1280px;margin:20px auto 60px;padding:0 32px;display:flex;flex-direction:column;gap:2px;}
 .step{background:var(--sheet);border:0.5px solid var(--rule);overflow:hidden;}
 .step+.step{border-top:none;}
 .step:first-child{border-radius:3px 3px 0 0;}
@@ -61,9 +61,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--paper);co
 .step.open .step-body{display:block;}
 
 /* Split layout */
-.split{display:grid;grid-template-columns:1fr 340px;min-height:420px;}
-.split-graph{padding:22px 20px 18px 22px;display:flex;flex-direction:column;gap:10px;border-right:0.5px solid var(--rule-lt);}
-.split-panel{padding:22px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 420px;min-height:420px;}
+.split-graph{padding:22px 20px 18px 22px;display:flex;flex-direction:column;gap:10px;border-right:0.5px solid var(--rule-lt);min-width:0;}
+.split-panel{padding:22px 28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;word-break:break-word;min-width:0;}
 
 /* Solo layout (algebra only) */
 .solo{padding:22px 24px 24px;}
@@ -348,8 +348,8 @@ canvas{display:block;border:0.5px solid var(--rule);background:var(--sheet);bord
             <button class="pal-btn pb-tax" id="pb4-tax" onclick="psel('tax')"><div class="pal-swatch"></div><span class="pname">Tax revenue</span></button>
             <button class="pal-btn pb-dwl" id="pb4-dwl" onclick="psel('dwl')"><div class="pal-swatch"></div><span class="pname">Deadweight loss</span></button>
           </div>
-          <div class="cov-bar"><div class="cov-fill" id="cov-fill"></div></div>
-          <p class="shade-note" id="shade-note">Select a region above, then drag to paint.</p>
+          <div class="cov-bar" style="display:none"><div class="cov-fill" id="cov-fill"></div></div>
+          <p class="shade-note" id="shade-note">Select a region, paint over it on the diagram, then click Check shading.</p>
           <div class="btn-row" style="margin-top:10px">
             <button class="btn-shade" onclick="chkShade()">Check shading</button>
             <button class="btn-soft" onclick="togEl('h4','')">Hint</button>
@@ -456,9 +456,10 @@ function qdy(y){return(1-(y-PAD.t)/PH)*MAXP;}
 
 function initCv(id){
   const cv=E(id);
-  const r=cv.parentElement.getBoundingClientRect();
-  cv.width=Math.floor(r.width)-2;
-  cv.style.width=cv.width+'px';
+  // Use offsetWidth for reliable post-layout sizing
+  const w=cv.parentElement.offsetWidth||cv.parentElement.getBoundingClientRect().width;
+  cv.width=Math.max(300,Math.floor(w)-2);
+  cv.style.width='100%';
   cv.height=CH;
   return cv.getContext('2d');
 }
@@ -807,12 +808,22 @@ function chk2(){
 }
 
 // ════════════════════════════════════════════════════
-// CANVAS 3 — Tax wedge placement
+// CANVAS 3 — Tax wedge (vertical bar)
 // ════════════════════════════════════════════════════
 let cv3ctx=null;
-// Student places two draggable price lines
-let wedge={pc:150,pp:120}; // start well away from answer (Pc=130, Pp=90)
-let wedgeDrag=null;
+
+// Wedge state: just the Q position — Pb and Ps snap to curves automatically
+let wedgeQ = 20; // starting Q — clearly wrong (answer is 35)
+let wedgeDrag = null; // 'bar'|'top'|'bottom'
+
+// Curve price at a given Q
+function demandP(Q){ return DA - DB*Q; }
+function supplyP(Q){ return SC + SD*Q; }
+
+// Wedge derived values — snapped to curves
+function wedgePb(){ return demandP(wedgeQ); }  // top = demand curve
+function wedgePs(){ return supplyP(wedgeQ); }  // bottom = supply curve
+function wedgeHeight(){ return wedgePb() - wedgePs(); }
 
 function initCv3(){
   cv3ctx=initCv('cv3');
@@ -828,110 +839,98 @@ function renderCv3(){
   drawFrame(ctx);
   const W=ctx.canvas.width;
 
-  // Just the original S and D — student figures out the rest
+  // Original S and D
   drawCurve(ctx,SC,SD,false,'#9e3015','S');
   drawCurve(ctx,DA,DB,true,'#1a4a82','D');
 
-  // Pre-tax equilibrium dot (from step 2)
+  // Pre-tax equilibrium
   drawEqDot(ctx,Qs,Ps,'Q*=45','P*=110');
 
-  const pcY=sy(wedge.pc);
-  const ppY=sy(wedge.pp);
-  const gap=Math.round(wedge.pc-wedge.pp);
-  const DOT_R=9;
-  const axisX=PAD.l; // dots sit on the price axis
+  // Wedge position
+  const wX  = sx(wedgeQ);
+  const pbY = sy(wedgePb());
+  const psY = sy(wedgePs());
+  const wH  = Math.abs(psY - pbY); // pixel height
+  const BAR_W = 14; // visual bar width
 
-  // Green wedge rectangle — only appears when both dots placed meaningfully apart
-  if(wedge.pc>wedge.pp+5){
-    ctx.fillStyle='rgba(26,110,56,0.10)';
-    ctx.fillRect(PAD.l,pcY,W-PAD.l-PAD.r,ppY-pcY);
-  }
-
-  // Dashed line from Pc dot across diagram
+  // Green wedge bar
   ctx.save();
-  ctx.strokeStyle='rgba(26,74,130,0.55)';
-  ctx.lineWidth=1.4;ctx.setLineDash([8,5]);
-  ctx.beginPath();ctx.moveTo(axisX,pcY);ctx.lineTo(W-PAD.r,pcY);ctx.stroke();
+  // Body fill
+  ctx.fillStyle = wedgeDrag ? 'rgba(26,110,56,0.25)' : 'rgba(26,110,56,0.18)';
+  ctx.fillRect(wX - BAR_W/2, pbY, BAR_W, wH);
+  // Border
+  ctx.strokeStyle = wedgeDrag ? '#1a6e38' : 'rgba(26,110,56,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(wX - BAR_W/2, pbY, BAR_W, wH);
   ctx.restore();
 
-  // Dashed line from Pp dot across diagram
+  // Dashed horizontal lines from bar to price axis
   ctx.save();
-  ctx.strokeStyle='rgba(158,48,21,0.55)';
-  ctx.lineWidth=1.4;ctx.setLineDash([8,5]);
-  ctx.beginPath();ctx.moveTo(axisX,ppY);ctx.lineTo(W-PAD.r,ppY);ctx.stroke();
+  ctx.setLineDash([6,4]);ctx.lineWidth=0.9;
+  ctx.strokeStyle='rgba(26,74,130,0.4)';
+  ctx.beginPath();ctx.moveTo(PAD.l,pbY);ctx.lineTo(wX-BAR_W/2,pbY);ctx.stroke();
+  ctx.strokeStyle='rgba(158,48,21,0.4)';
+  ctx.beginPath();ctx.moveTo(PAD.l,psY);ctx.lineTo(wX-BAR_W/2,psY);ctx.stroke();
   ctx.restore();
 
-  // Wedge size bracket on right — shows gap in $ but no target
-  if(wedge.pc>wedge.pp+5){
-    const bx=W-PAD.r-20;
-    ctx.strokeStyle='rgba(26,110,56,0.6)';ctx.lineWidth=1.2;ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.moveTo(bx,pcY);ctx.lineTo(bx+6,pcY);
-    ctx.lineTo(bx+6,ppY);ctx.lineTo(bx,ppY);
-    ctx.stroke();
-    ctx.fillStyle='rgba(26,110,56,0.75)';
-    ctx.font='bold 11px JetBrains Mono,monospace';
-    ctx.textAlign='left';
-    ctx.fillText('$'+gap,bx+10,(pcY+ppY)/2+4);
-  }
-
-  // Pc dot — blue, on price axis, draggable
-  ctx.save();
-  if(wedgeDrag==='pc'){
-    ctx.shadowColor='rgba(26,74,130,0.3)';ctx.shadowBlur=8;
-  }
-  ctx.beginPath();ctx.arc(axisX,pcY,DOT_R,0,Math.PI*2);
-  ctx.fillStyle=wedgeDrag==='pc'?'#1a4a82':'rgba(26,74,130,0.75)';
-  ctx.fill();
-  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
-  ctx.restore();
-  // Pc label inside dot
-  ctx.fillStyle='white';
-  ctx.font='bold 8px JetBrains Mono,monospace';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('Pc',axisX,pcY);
-  ctx.textBaseline='alphabetic';
-
-  // Pp dot — red, on price axis, draggable
-  ctx.save();
-  if(wedgeDrag==='pp'){
-    ctx.shadowColor='rgba(158,48,21,0.3)';ctx.shadowBlur=8;
-  }
-  ctx.beginPath();ctx.arc(axisX,ppY,DOT_R,0,Math.PI*2);
-  ctx.fillStyle=wedgeDrag==='pp'?'#9e3015':'rgba(158,48,21,0.75)';
-  ctx.fill();
-  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
-  ctx.restore();
-  ctx.fillStyle='white';
-  ctx.font='bold 8px JetBrains Mono,monospace';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('Pp',axisX,ppY);
-  ctx.textBaseline='alphabetic';
-
-  // Price value labels next to dots
-  ctx.fillStyle='rgba(26,74,130,0.8)';
+  // Price labels on axis
   ctx.font='10px JetBrains Mono,monospace';
-  ctx.textAlign='left';
-  ctx.fillText(Math.round(wedge.pc),axisX+DOT_R+4,pcY+3.5);
+  ctx.fillStyle='rgba(26,74,130,0.75)';
+  ctx.textAlign='right';
+  ctx.fillText('Pb='+Math.round(wedgePb()), PAD.l-5, pbY+3.5);
+  ctx.fillStyle='rgba(158,48,21,0.75)';
+  ctx.fillText('Ps='+Math.round(wedgePs()), PAD.l-5, psY+3.5);
 
-  ctx.fillStyle='rgba(158,48,21,0.8)';
-  ctx.fillText(Math.round(wedge.pp),axisX+DOT_R+4,ppY+3.5);
+  // Wedge height label (gap in $) — on the right side of the bar
+  const gapLabel = '$'+Math.round(wedgeHeight());
+  ctx.fillStyle='rgba(26,110,56,0.85)';
+  ctx.font='bold 11px JetBrains Mono,monospace';
+  ctx.textAlign='left';
+  ctx.fillText(gapLabel, wX+BAR_W/2+5, (pbY+psY)/2+4);
+
+  // Top handle (Pb — blue)
+  const topActive = wedgeDrag==='top';
+  ctx.save();
+  if(topActive){ctx.shadowColor='rgba(26,74,130,0.4)';ctx.shadowBlur=8;}
+  ctx.beginPath();ctx.arc(wX, pbY, 8, 0, Math.PI*2);
+  ctx.fillStyle = topActive ? '#1a4a82' : 'rgba(26,74,130,0.75)';
+  ctx.fill();
+  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle='white';ctx.font='bold 7px JetBrains Mono';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('Pb',wX,pbY);
+  ctx.textBaseline='alphabetic';
+
+  // Bottom handle (Ps — red)
+  const botActive = wedgeDrag==='bottom';
+  ctx.save();
+  if(botActive){ctx.shadowColor='rgba(158,48,21,0.4)';ctx.shadowBlur=8;}
+  ctx.beginPath();ctx.arc(wX, psY, 8, 0, Math.PI*2);
+  ctx.fillStyle = botActive ? '#9e3015' : 'rgba(158,48,21,0.75)';
+  ctx.fill();
+  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle='white';ctx.font='bold 7px JetBrains Mono';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('Ps',wX,psY);
+  ctx.textBaseline='alphabetic';
+
+  // Center drag indicator — three horizontal lines on bar
+  ctx.fillStyle='rgba(26,110,56,0.5)';
+  ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText('⋮',wX,(pbY+psY)/2);
 }
 
 function updateWedgeHint(){
-  const gap=Math.round(wedge.pc-wedge.pp);
   const el=E('wedge-size-hint');
-  if(gap>5){
-    el.textContent='Current wedge: $'+gap;
-    el.style.color='var(--ink-faint)';
-  } else {
-    el.textContent='';
-  }
+  if(!el)return;
+  el.textContent='Pb = '+Math.round(wedgePb())+'  ·  Ps = '+Math.round(wedgePs())+'  ·  gap = $'+Math.round(wedgeHeight());
+  el.style.color='var(--ink-faint)';
 }
 
 function setupCv3Events(){
   const cv=E('cv3');
-  const DOT_R=14; // hit zone radius (larger than visual for easier grabbing)
 
   function getXY(e){
     const r=cv.getBoundingClientRect();
@@ -941,35 +940,58 @@ function setupCv3Events(){
     return{x:(cx-r.left)*scx, y:(cy-r.top)*scy};
   }
 
-  function hitDot(svgY, lineP){
-    // Hit test: within DOT_R pixels of the dot (which sits on PAD.l, lineP)
-    return Math.abs(svgY-sy(lineP))<DOT_R;
+  function hitHandle(px,py,hx,hy,r=14){return Math.hypot(px-hx,py-hy)<r;}
+  function hitBar(px,py){
+    const wX=sx(wedgeQ);
+    const pbY=sy(wedgePb()), psY=sy(wedgePs());
+    const BAR_W=14;
+    return px>=wX-BAR_W/2-6 && px<=wX+BAR_W/2+6 && py>=pbY-6 && py<=psY+6;
   }
+
+  let dragStartX=0, dragStartQ=0;
 
   function start(e){
     e.preventDefault();
-    const{y}=getXY(e);
-    if(hitDot(y,wedge.pc)) wedgeDrag='pc';
-    else if(hitDot(y,wedge.pp)) wedgeDrag='pp';
-    // Also allow dragging anywhere on the dashed line
-    else if(Math.abs(y-sy(wedge.pc))<10) wedgeDrag='pc';
-    else if(Math.abs(y-sy(wedge.pp))<10) wedgeDrag='pp';
+    const p=getXY(e);
+    const wX=sx(wedgeQ);
+    const pbY=sy(wedgePb()), psY=sy(wedgePs());
+    if(hitHandle(p.x,p.y,wX,pbY)){
+      wedgeDrag='top';
+    }else if(hitHandle(p.x,p.y,wX,psY)){
+      wedgeDrag='bottom';
+    }else if(hitBar(p.x,p.y)){
+      wedgeDrag='bar';
+      dragStartX=p.x;
+      dragStartQ=wedgeQ;
+    }
   }
 
   function move(e){
     e.preventDefault();
     if(!wedgeDrag)return;
-    const{y}=getXY(e);
-    const newP=qdy(y);
-    if(wedgeDrag==='pc'){
-      wedge.pc=Math.max(wedge.pp+5,Math.min(MAXP*0.97,newP));
-    }else{
-      wedge.pp=Math.max(5,Math.min(wedge.pc-5,newP));
+    const p=getXY(e);
+    // All drag modes move the bar horizontally — Q is the only free parameter
+
+    if(wedgeDrag==='bar'||wedgeDrag==='top'||wedgeDrag==='bottom'){
+      let rawQ;
+      if(wedgeDrag==='bar'){
+        rawQ = dragStartQ + (qdx(p.x) - qdx(dragStartX));
+      } else {
+        rawQ = qdx(p.x);
+      }
+      // Snap to nearest integer so Pb/Ps are always clean whole numbers
+      wedgeQ = Math.round(Math.max(1, Math.min(MAXQ*0.92, rawQ)));
     }
-    renderCv3();updateWedgeHint();
+    renderCv3();
+    updateWedgeHint();
   }
 
-  function end(e){e.preventDefault();wedgeDrag=null;renderCv3();}
+  function end(e){
+    e.preventDefault();
+    wedgeDrag=null;
+    dragStartX=0;
+    renderCv3();
+  }
 
   cv.addEventListener('mousedown',start);
   cv.addEventListener('mousemove',move);
@@ -981,25 +1003,21 @@ function setupCv3Events(){
 }
 
 function chk3(){
-  const pcOk=Math.abs(wedge.pc-Pc)<=4;
-  const ppOk=Math.abs(wedge.pp-Pp)<=4;
-  const wedgeOk=Math.abs((wedge.pc-wedge.pp)-TAX)<=4;
+  const qOk  = Math.abs(wedgeQ - Qt) <= 1;
+  const hOk  = Math.abs(wedgeHeight() - TAX) <= 1;
+  // Top touches demand and bottom touches supply by construction (snapped)
+  // So we only need to check Q position
   const fb=E('fb3');
-
   let lines=[];
-  if(pcOk) lines.push('<span class="line ok">✓ Consumer price Pc = 130 correctly placed.</span>');
-  else lines.push('<span class="line err">✗ Pc needs adjusting — should be '+Pc+' (currently ~'+Math.round(wedge.pc)+').</span>');
-  if(ppOk) lines.push('<span class="line ok">✓ Producer price Pp = 90 correctly placed.</span>');
-  else lines.push('<span class="line err">✗ Pp needs adjusting — should be '+Pp+' (currently ~'+Math.round(wedge.pp)+').</span>');
-  if(!wedgeOk&&pcOk&&ppOk===false) lines.push('<span class="line err">✗ Wedge size = $'+Math.round(wedge.pc-wedge.pp)+' — should equal the tax of $'+TAX+'.</span>');
 
-  fb.className='fb '+(pcOk&&ppOk?'ok':'err')+' show';
-  fb.innerHTML=lines.join('');
-
-  if(pcOk&&ppOk){
-    wedge={pc:Pc,pp:Pp};
-    renderCv3();
+  if(qOk && hOk){
+    lines.push('<span class="line ok">✓ Wedge correctly placed — Q*ₜ = 35, Pb = 130, Ps = 90.</span>');
+    fb.className='fb ok show';fb.innerHTML=lines.join('');
     E('nb3').style.display='inline-block';
+  } else {
+    if(!qOk) lines.push('<span class="line err">✗ Wedge is at the wrong quantity — the tax equilibrium is where the wedge exactly fits between the curves.</span>');
+    if(!hOk) lines.push('<span class="line err">✗ Wedge height ($'+Math.round(wedgeHeight())+') doesn\'t match the tax — but this shouldn\'t happen if the wedge is on the curves. Try moving it.</span>');
+    fb.className='fb err show';fb.innerHTML=lines.join('');
   }
 }
 
@@ -1020,6 +1038,15 @@ function pCS4(){const p=[];p.push({x:sx(0),y:sy(DA)});for(let i=0;i<=60;i++){con
 function pPS4(){const p=[];p.push({x:sx(0),y:sy(SC)});for(let i=0;i<=60;i++){const Q=i/60*Qt;p.push({x:sx(Q),y:sy(SC+SD*Q)});}p.push({x:sx(Qt),y:sy(Pp)});p.push({x:sx(0),y:sy(Pp)});return p;}
 function pTax4(){return[{x:sx(0),y:sy(Pc)},{x:sx(Qt),y:sy(Pc)},{x:sx(Qt),y:sy(Pp)},{x:sx(0),y:sy(Pp)}];}
 function pDWL4(){const p=[];p.push({x:sx(Qt),y:sy(Pc)});for(let i=0;i<=30;i++){const Q=Qt+(i/30)*(Qs-Qt);p.push({x:sx(Q),y:sy(DA-DB*Q)});}for(let i=30;i>=0;i--){const Q=Qt+(i/30)*(Qs-Qt);p.push({x:sx(Q),y:sy(SC+SD*Q)});}p.push({x:sx(Qt),y:sy(Pp)});return p;}
+
+function ptInPoly(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
 
 function calcCoverage(pts,poly){
   if(pts.size===0)return{pct:0,missRatio:0};
@@ -1071,7 +1098,7 @@ function renderCv4(){
   ctx.fillRect(PAD.l,pcY,qtX-PAD.l,ppY-pcY);
 
   // Accepted shadings drawn before curves so curves sit on top
-  const fills={cs:'rgba(26,74,130,0.15)',ps:'rgba(158,48,21,0.15)',tax:'rgba(26,110,56,0.20)',dwl:'rgba(94,26,138,0.15)'};
+  const fills={cs:'rgba(26,74,130,0.22)',ps:'rgba(158,48,21,0.22)',tax:'rgba(26,110,56,0.28)',dwl:'rgba(94,26,138,0.22)'};
   const polys={cs:pCS4(),ps:pPS4(),tax:pTax4(),dwl:pDWL4()};
   const lbls={
     cs:{x:sx(Qt*0.13),y:sy(DA-(DA-Pc)*0.3),t:'CS',c:'#1a4a82'},
@@ -1090,10 +1117,10 @@ function renderCv4(){
     ctx.textAlign='center';ctx.fillText(l.t,l.x,l.y);
   });
 
-  // Live painting preview
-  if(painting4&&sel4&&strokePts4.length>0){
+  // Stroke preview — shown whenever there are strokes, not just while painting
+  if(sel4&&strokePts4.length>0){
     const colors={cs:'rgba(26,74,130,0.28)',ps:'rgba(158,48,21,0.28)',tax:'rgba(26,110,56,0.28)',dwl:'rgba(94,26,138,0.28)'};
-    ctx.save();ctx.strokeStyle=colors[sel4];ctx.lineWidth=9;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.save();ctx.strokeStyle=colors[sel4]||'rgba(0,0,0,0.15)';ctx.lineWidth=9;ctx.lineCap='round';ctx.lineJoin='round';
     let lp=null;
     strokePts4.forEach(p=>{
       if(!lp||Math.hypot(p.x-lp.x,p.y-lp.y)>28){ctx.beginPath();ctx.moveTo(p.x,p.y);}
@@ -1144,51 +1171,47 @@ function psel(id){
 }
 
 function updateCovDisplay(){
-  if(!sel4||pts4.size===0){
-    E('cov-fill').style.width='0%';
-    E('shade-note').textContent='Select a region above, then drag to paint.';
-    return;
-  }
-  const polys={cs:pCS4(),ps:pPS4(),tax:pTax4(),dwl:pDWL4()};
-  const{pct}=calcCoverage(pts4,polys[sel4]);
-  E('cov-fill').style.width=Math.min(100,pct)+'%';
-  const names={cs:'Consumer surplus',ps:'Producer surplus',tax:'Tax revenue',dwl:'Deadweight loss'};
-  E('shade-note').textContent=names[sel4]+' — '+pct+'% covered';
+  // Coverage tracked silently — not shown to student until Check is clicked
 }
 
 function chkShade(){
   if(!sel4){setFb('fb4','hint','Select a region first.');return;}
-  if(pts4.size===0){setFb('fb4','hint','Paint over the region on the diagram, then click Check.');return;}
+  if(pts4.size===0){setFb('fb4','hint','Paint over the region on the diagram, then click Check shading.');return;}
   const polys={cs:pCS4(),ps:pPS4(),tax:pTax4(),dwl:pDWL4()};
   const{pct,missRatio}=calcCoverage(pts4,polys[sel4]);
-  const th=sel4==='dwl'?35:50;
-  const mth=sel4==='dwl'?0.65:0.50;
+  const th=sel4==='dwl'?30:45;
+  const mth=sel4==='dwl'?0.65:0.52;
   const hints={
-    cs:'CS is above Pc=130 and below the demand curve — the upper-left triangle.',
-    ps:'PS is above the original supply (dashed) and below Pp=90 — the lower-left triangle.',
+    cs:'CS is the triangle above Pc=130 below the demand curve — paint inside that region.',
+    ps:'PS is the triangle above the original supply curve below Pp=90 — paint inside that region.',
     tax:'Tax revenue is the rectangle between Pc=130 and Pp=90, from the axis to Q*ₜ=35.',
-    dwl:'DWL is the small triangle between Q*ₜ=35 and Q*=45.'
+    dwl:'DWL is the small triangle between Q*ₜ=35 and Q*=45 — paint carefully in that narrow area.'
   };
   if(pct>=th&&missRatio<mth){
+    // Accept — fill clean polygon, clear strokes
     sh4[sel4]=true;pts4=new Set();strokePts4=[];
     E('pb4-'+sel4).classList.add('placed','ok');
     const names={cs:'Consumer surplus',ps:'Producer surplus',tax:'Tax revenue',dwl:'Deadweight loss'};
     E('pb4-'+sel4).querySelector('.pname').textContent=names[sel4]+' ✓';
     sel4=null;
     document.querySelectorAll('[id^="pb4-"]').forEach(b=>b.classList.remove('sel'));
-    renderCv4();updateCovDisplay();
+    renderCv4();
     const rem=Object.keys(sh4).filter(k=>!sh4[k]);
-    if(rem.length===0){setFb('fb4','ok','All four regions correctly identified.');E('nb4').style.display='inline-block';}
-    else setFb('fb4','ok','Correct — now shade: '+rem.join(', ')+'.');
-  }else if(pct<th){
+    if(rem.length===0){
+      setFb('fb4','ok','All four regions identified. Well done.');
+      E('nb4').style.display='inline-block';
+    } else {
+      setFb('fb4','ok','Correct — now select and shade: '+rem.join(', ')+'.');
+    }
+  } else if(missRatio>=mth){
+    // Too far outside — clear and redirect
+    pts4=new Set();strokePts4=[];renderCv4();
     flashCanvas('cv4');
-    setFb('fb4','err','Only '+pct+'% coverage — keep painting within the region, then check again.');
-  }else{
-    pts4=new Set();strokePts4=[];renderCv4();updateCovDisplay();
-    const names={cs:'Consumer surplus',ps:'Producer surplus',tax:'Tax revenue',dwl:'Deadweight loss'};
-    const btn=E('pb4-'+sel4);if(btn)btn.querySelector('.pname').textContent=names[sel4];
+    setFb('fb4','err','Too much of your painting was outside the region. Strokes cleared. '+hints[sel4]);
+  } else {
+    // Not enough coverage — keep strokes, encourage more painting
     flashCanvas('cv4');
-    setFb('fb4','err','Too much outside the region. Strokes cleared. '+hints[sel4]);
+    setFb('fb4','err','Not enough of the region covered — keep painting, then check again.');
   }
 }
 
@@ -1239,9 +1262,9 @@ function setupCv4Events(){
     if(!down)return;down=false;painting4=false;
     renderCv4();updateCovDisplay(); // keep strokes visible
   });
-  cv.addEventListener('touchstart',e=>{e.preventDefault();if(!sel4)return;down=true;painting4=true;pts4=new Set();strokePts4=[];const p=getXY(e);paint(p.x,p.y);},{passive:false});
+  cv.addEventListener('touchstart',e=>{e.preventDefault();if(!sel4)return;down=true;painting4=true;const p=getXY(e);paint(p.x,p.y);},{passive:false});
   cv.addEventListener('touchmove',e=>{e.preventDefault();if(!down)return;const p=getXY(e);paint(p.x,p.y);},{passive:false});
-  cv.addEventListener('touchend',e=>{e.preventDefault();if(!down)return;down=false;painting4=false;renderCv4();},{passive:false});
+  cv.addEventListener('touchend',e=>{e.preventDefault();if(!down)return;down=false;painting4=false;renderCv4();updateCovDisplay();},{passive:false});
 }
 
 // ════════════════════════════════════════════════════
@@ -1316,7 +1339,7 @@ function toggleDev(){
     });
     // Snap curves to correct for dev mode so later steps work
     c1={da:DA,db:DB,sc:SC,sd:SD};
-    wedge={pc:Pc,pp:Pp};
+    wedgeQ=Qt;
     sh4={cs:false,ps:false,tax:false,dwl:false};
     // Init all canvases
     initCv1();initCv2();initCv3();initCv4();
@@ -1336,11 +1359,16 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
   };
 }
 
-// Init
+// Init — wait one frame so grid layout is complete before sizing canvases
 window.addEventListener('load',()=>{
-  initCv1();
+  requestAnimationFrame(()=>{
+    initCv1();
+  });
   window.addEventListener('resize',()=>{
-    if(E('s1').classList.contains('open')||E('s1').classList.contains('done'))initCv1();
+    if(cv1ctx)initCv1();
+    if(cv2ctx)initCv2();
+    if(cv3ctx)initCv3();
+    if(cv4ctx)initCv4();
   });
 });
 </script>
