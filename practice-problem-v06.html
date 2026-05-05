@@ -445,9 +445,9 @@ const CW=480, CH=340;
 const PAD={l:64,r:18,t:16,b:44};
 const PW=CW-PAD.l-PAD.r, PH=CH-PAD.t-PAD.b;
 
-// Fixed scale — ensures D x-intercept (Q=DA/DB=100) and all key values visible
-const MAXP=DA*1.25;   // 250 — gives room above DA=200
-const MAXQ=(DA/DB)*1.25; // 125 — demand x-intercept at Q=100 visible with margin
+// Fixed scale — Q axis ends just past the demand x-intercept (Q=100)
+const MAXP=DA*1.25;   // 250
+const MAXQ=(DA/DB)*1.08; // 108 — just past x-intercept of Q=100, no wasted space
 
 function sx(Q){return PAD.l+(Q/MAXQ)*PW;}
 function sy(P){return PAD.t+(1-P/MAXP)*PH;}
@@ -526,21 +526,25 @@ function drawCurve(ctx,intercept,slope,isDemand,color,label,alpha,dashed){
   if(label&&!(alpha<0.5)){
     let lQ,lP;
     if(isDemand){
-      // D: place at 68% toward x-intercept
-      lQ=(intercept/slope)*0.68;
-      lP=intercept-slope*lQ;
+      // D: walk from right edge inward — find last visible point, then back off slightly
+      lQ=null;lP=null;
+      for(let f=0.94;f>0.05;f-=0.02){
+        const Q=(intercept/slope)*f;
+        const P=intercept-slope*Q;
+        if(P<14||P>MAXP*0.94||Q>MAXQ*0.97)continue;
+        lQ=Q;lP=P;
+        break;
+      }
     }else{
-      // S: place at a fixed Q = 60% of MAXQ, regardless of slope
-      // This keeps the label visible and mid-curve for any slope
+      // S: fixed Q = 60% of MAXQ, fallback if above chart
       lQ=MAXQ*0.60;
       lP=intercept+slope*lQ;
-      // If that's off the top, walk inward until it fits
       if(lP>MAXP*0.88){
         lQ=Math.max(MAXQ*0.15,(MAXP*0.82-intercept)/Math.max(slope,0.01));
         lP=intercept+slope*lQ;
       }
     }
-    if(lQ!==null&&lP>8&&lP<MAXP*0.95&&lQ>0&&lQ<MAXQ*0.99){
+    if(lQ!==null&&lP!==null&&lP>10&&lP<MAXP*0.95&&lQ>0&&lQ<MAXQ*0.97){
       ctx.save();ctx.globalAlpha=alpha??1;
       ctx.fillStyle=color;ctx.font='italic bold 14px Playfair Display,serif';
       ctx.textAlign='left';ctx.fillText(label,sx(lQ)+6,sy(lP)-6);ctx.restore();
