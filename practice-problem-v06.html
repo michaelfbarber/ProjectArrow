@@ -442,7 +442,7 @@ const TS0_=0.5*(DA-SC)*Qs;   // 4050
 // CANVAS ENGINE
 // ════════════════════════════════════════════════════
 const CW=480, CH=340;
-const PAD={l:54,r:18,t:16,b:42};
+const PAD={l:64,r:18,t:16,b:44};
 const PW=CW-PAD.l-PAD.r, PH=CH-PAD.t-PAD.b;
 
 // Fixed scale — ensures D x-intercept (Q=DA/DB=100) and all key values visible
@@ -466,51 +466,48 @@ function initCv(id){
 
 function drawFrame(ctx){
   const W=ctx.canvas.width;
-  // Grid
-  ctx.strokeStyle='rgba(0,0,0,0.04)';ctx.lineWidth=0.5;
+
+  // Grid lines — subtle
+  ctx.strokeStyle='rgba(0,0,0,0.05)';ctx.lineWidth=0.5;
   for(let i=1;i<=5;i++){
     const gx=sx(i/5*MAXQ),gy=sy(i/5*MAXP);
     ctx.beginPath();ctx.moveTo(gx,PAD.t);ctx.lineTo(gx,CH-PAD.b);ctx.stroke();
     ctx.beginPath();ctx.moveTo(PAD.l,gy);ctx.lineTo(W-PAD.r,gy);ctx.stroke();
   }
-  // Axes
-  ctx.strokeStyle='rgba(0,0,0,0.22)';ctx.lineWidth=1.2;
-  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,CH-PAD.b);ctx.lineTo(W-PAD.r,CH-PAD.b);ctx.stroke();
-  // Ticks + labels
-  ctx.fillStyle='rgba(0,0,0,0.32)';ctx.font='10px JetBrains Mono,monospace';
-  for(let i=1;i<=5;i++){
-    const Q=Math.round(i/5*MAXQ),P=Math.round(i/5*MAXP);
-    const gx=sx(i/5*MAXQ),gy=sy(i/5*MAXP);
-    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=0.8;
-    ctx.beginPath();ctx.moveTo(gx,CH-PAD.b);ctx.lineTo(gx,CH-PAD.b+4);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(PAD.l,gy);ctx.lineTo(PAD.l-4,gy);ctx.stroke();
-    ctx.textAlign='center';ctx.fillText(Q,gx,CH-PAD.b+13);
-    ctx.textAlign='right';ctx.fillText(P,PAD.l-7,gy+3.5);
-  }
-  ctx.fillStyle='rgba(0,0,0,0.38)';ctx.font='italic 12px DM Sans,sans-serif';
-  ctx.textAlign='center';ctx.fillText('Q',PAD.l+PW/2,CH-4);
-  ctx.save();ctx.translate(14,PAD.t+PH/2);ctx.rotate(-Math.PI/2);ctx.fillText('P',0,0);ctx.restore();
 
-  // Answer-value guide ticks — faint markers at key values so students can align
-  const guidePvals=[SC,Pp,Ps,Pc,DA]; // 20,90,110,130,200
-  const guideQvals=[Qt,Qs,DA/DB];    // 35,45,100
-  ctx.save();
-  ctx.strokeStyle='rgba(0,0,0,0.10)';ctx.lineWidth=0.5;ctx.setLineDash([2,3]);
-  guidePvals.forEach(P=>{
-    if(P<=0||P>=MAXP)return;
+  // Axes
+  ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,CH-PAD.b);ctx.lineTo(W-PAD.r,CH-PAD.b);ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle='rgba(0,0,0,0.45)';ctx.font='italic 12px DM Sans,sans-serif';
+  ctx.textAlign='center';ctx.fillText('Q',PAD.l+PW/2,CH-3);
+  ctx.save();ctx.translate(12,PAD.t+PH/2);ctx.rotate(-Math.PI/2);ctx.fillText('P',0,0);ctx.restore();
+
+  // Answer-value ticks on P axis — these are the meaningful values students need
+  // Replace generic 5-division ticks with economically meaningful ones
+  const pTicks=[SC,Pp,Ps,Pc,DA]; // 20, 90, 110, 130, 200
+  const qTicks=[Qt,Qs,DA/DB];    // 35, 45, 100
+
+  // P ticks — clear, readable
+  ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1;
+  ctx.fillStyle='rgba(0,0,0,0.55)';ctx.font='10px JetBrains Mono,monospace';
+  pTicks.forEach(P=>{
+    if(P<=0||P>MAXP*0.99)return;
     const y=sy(P);
-    ctx.beginPath();ctx.moveTo(PAD.l-8,y);ctx.lineTo(PAD.l,y);ctx.stroke();
-    ctx.fillStyle='rgba(0,0,0,0.18)';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
-    ctx.fillText(P,PAD.l-10,y+3);
+    ctx.beginPath();ctx.moveTo(PAD.l-5,y);ctx.lineTo(PAD.l,y);ctx.stroke();
+    ctx.textAlign='right';
+    ctx.fillText(P,PAD.l-8,y+3.5);
   });
-  guideQvals.forEach(Q=>{
-    if(Q<=0||Q>=MAXQ)return;
+
+  // Q ticks — clear, readable
+  qTicks.forEach(Q=>{
+    if(Q<=0||Q>MAXQ*0.99)return;
     const x=sx(Q);
-    ctx.beginPath();ctx.moveTo(x,CH-PAD.b);ctx.lineTo(x,CH-PAD.b+8);ctx.stroke();
-    ctx.fillStyle='rgba(0,0,0,0.18)';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
-    ctx.fillText(Q,x,CH-PAD.b+16);
+    ctx.beginPath();ctx.moveTo(x,CH-PAD.b);ctx.lineTo(x,CH-PAD.b+5);ctx.stroke();
+    ctx.textAlign='center';
+    ctx.fillText(Q,x,CH-PAD.b+14);
   });
-  ctx.restore();
 }
 
 function drawCurve(ctx,intercept,slope,isDemand,color,label,alpha,dashed){
@@ -873,13 +870,14 @@ function renderCv3(){
   ctx.beginPath();ctx.moveTo(PAD.l,psY);ctx.lineTo(wX-BAR_W/2,psY);ctx.stroke();
   ctx.restore();
 
-  // Price labels on axis
-  ctx.font='10px JetBrains Mono,monospace';
-  ctx.fillStyle='rgba(26,74,130,0.75)';
-  ctx.textAlign='right';
-  ctx.fillText('Pb='+Math.round(wedgePb()), PAD.l-5, pbY+3.5);
-  ctx.fillStyle='rgba(158,48,21,0.75)';
-  ctx.fillText('Ps='+Math.round(wedgePs()), PAD.l-5, psY+3.5);
+  // Price labels — float near right end of dashed lines, not on axis
+  const W2=ctx.canvas.width;
+  ctx.font='bold 10px JetBrains Mono,monospace';
+  ctx.fillStyle='rgba(26,74,130,0.8)';
+  ctx.textAlign='left';
+  ctx.fillText('Pb='+Math.round(wedgePb()), wX+BAR_W/2+8, pbY-4);
+  ctx.fillStyle='rgba(158,48,21,0.8)';
+  ctx.fillText('Ps='+Math.round(wedgePs()), wX+BAR_W/2+8, psY+12);
 
   // Wedge height label (gap in $) — on the right side of the bar
   const gapLabel = '$'+Math.round(wedgeHeight());
@@ -979,8 +977,10 @@ function setupCv3Events(){
       } else {
         rawQ = qdx(p.x);
       }
-      // Snap to nearest integer so Pb/Ps are always clean whole numbers
-      wedgeQ = Math.round(Math.max(1, Math.min(MAXQ*0.92, rawQ)));
+      // Snap to nearest integer, clamp left of equilibrium where D > S
+      // Beyond equilibrium the wedge inverts — not meaningful for tax incidence
+      const maxQ = Math.floor(Qs) - 1; // can't go past equilibrium
+      wedgeQ = Math.round(Math.max(1, Math.min(maxQ, rawQ)));
     }
     renderCv3();
     updateWedgeHint();
@@ -1148,11 +1148,15 @@ function renderCv4(){
   ctx.save();ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
   ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fillStyle='#1c1810';ctx.fill();ctx.restore();
 
-  // Price axis labels — Pc, Pp, Q*t (earned from step 3)
-  ctx.fillStyle='rgba(0,0,0,0.42)';ctx.font='10px JetBrains Mono';
-  ctx.textAlign='center';ctx.fillText('Q*ₜ=35',ex,CH-PAD.b+13);
-  ctx.textAlign='right';ctx.fillText('Pc=130',PAD.l-6,ey+3.5);
-  ctx.fillText('Pp=90',PAD.l-6,ppY+3.5);
+  // Price axis labels — colored to distinguish Pc from Pp
+  // (numbers already on axis from drawFrame — just add colored name labels)
+  ctx.font='bold 9px JetBrains Mono';
+  ctx.fillStyle='rgba(26,74,130,0.7)';
+  ctx.textAlign='right';ctx.fillText('Pc',PAD.l-6,ey+3.5);
+  ctx.fillStyle='rgba(158,48,21,0.7)';
+  ctx.fillText('Pp',PAD.l-6,ppY+3.5);
+  ctx.fillStyle='rgba(0,0,0,0.45)';ctx.font='9px JetBrains Mono';
+  ctx.textAlign='center';ctx.fillText('Q*ₜ',ex,CH-PAD.b+13);
 
   // Wedge bracket on right side
   const bx=ctx.canvas.width-PAD.r-20;
